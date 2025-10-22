@@ -17,7 +17,7 @@ set base_dir [file normalize [file dirname [info script]]]
 set proj_dir [file join $base_dir "../build/$proj_name"]
 set report_dir [file join $base_dir "../build/reports"]
 set rtl_dir [file normalize [file join $base_dir "../rtl"]]
-set constr_dir [file normalize [file join $base_dir "../constraints"]]
+set constr_dir [file normalize [file join $base_dir "../constraints/${proj_name}"]]
 set bd_dir [file normalize [file join $base_dir "../bd"]]
 set ip_dir  [file normalize [file join $base_dir "../ip"]]
 

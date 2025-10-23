@@ -13,7 +13,11 @@ The expected project structure for your Vivado project is the following:
 │   ├── bd1.tcl    # Block design
 │   └── bd2.tcl    # Block design
 ├── build          # Build directory, where everything gets generated
-├── constraints    # Any constraint file
+├── constraints    # Any constraint file, organized by project
+│   ├── proj1
+│   │   └── timing.xdc
+│   └── proj2
+│       └── timing.xdc
 ├── ip             # Any .xci IP file
 ├── README.md      # Readme for your project
 ├── rtl            # RTL files for your modules

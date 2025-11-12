@@ -57,11 +57,8 @@ write_cfgmem -force -format bin -interface smapx32 -disablebitswap -loadbit "up 
 
 # ---- Export sdt for petalinux ----
 set sdt_path "$proj_dir/$proj_name.sdt"
-file mkdir $sdt_path
 # Pass arguments to xsct and use sdtgen
-exec xsct -eval "set xsa_path $xsa_path; set sdt_path $sdt_path; set board_dts $board_dts; \
-    sdtgen set_dt_param -xsa $xsa_path -dir $sdt_path -board_dts $board_dts; \
-    sdtgen generate_sdt"
+exec xsct "$base_dir/xsct/generate_sdt.tcl" $xsa_path $sdt_path $board_dts
 
 # ---- Copy reports ----
 file mkdir $report_dir

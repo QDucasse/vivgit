@@ -1,24 +1,29 @@
 # generate_boot.tcl
 # Usage: xsct generate_boot.tcl <proj_name>
 
-if { $argc != 1 } {
-    puts "Usage: xsct generate_boot.tcl <proj_name>"
+if { $argc != 2 } {
+    puts "Usage: xsct generate_boot.tcl <proj_name> <plnx_proj_path>"
     exit 1
 }
 
 set proj_name [lindex $argv 0]
+set plnx_proj_path [lindex $argv 1]
 # Path setup
 set base_dir [file normalize [file dirname [info script]]]
 set proj_dir [file join $base_dir "../../build/$proj_name"]
 set xsa_path "$proj_dir/${proj_name}.xsa"
 set boot_dir "$proj_dir/${proj_name}.boot"
 set bit_path [glob -nocomplain -directory $proj_dir *.bit]
+set uboot_path [glob -nocomplain -directory "$plnx_proj_path/images/linux" u-boot.elf]
+set bl31_path [glob -nocomplain -directory "$plnx_proj_path/images/linux" bl31.elf]
+# Note: No kernel image or dtb since we load them through PXE in u-boot
+# set sysdtb_path [glob -nocomplain -directory "$plnx_proj_path/images/linux" system.dtb]
 
 file mkdir $boot_dir
 set fsbl_dir "$boot_dir/zynqmp_fsbl"
-set fsbl_path "$fsbl_dir/executable.elf"
+set fsbl_path "$fsbl_dir/zynqmp_fsbl.elf"
 set pmufw_dir "$boot_dir/pmu_fw"
-set pmufw_path "$pmufw_dir/executable.elf"
+set pmufw_path "$pmufw_dir/pmufw.elf"
 set bif_path "$boot_dir/bootgen.bif"
 set boot_bin_path "$boot_dir/BOOT.BIN"
 
@@ -46,15 +51,34 @@ proc has_pl_ip {} {
 
 # ---- Boot creation ----
 proc create_bif {} {
-    global proj_dir fsbl_path pmufw_path bif_path bit_path
+    global proj_dir fsbl_path pmufw_path bif_path bit_path uboot_path bl31_path sysdtb_path
     set fileId [open $bif_path "w"]
     puts $fileId "the_ROM_image:"
     puts $fileId "{"
-    puts $fileId "\[bootloader\] $fsbl_path"
-    puts $fileId "\[pmufw_image\] $pmufw_path"
-    if {$bit_path != ""} {
-        puts $fileId "\[destination_device=pl\] $bit_path"
+    puts $fileId "\t\[bootloader, destination_cpu=a53-0\] $fsbl_path"
+    puts $fileId "\t\[pmufw_image\] $pmufw_path"
+    if {$bl31_path != ""} {
+        puts $fileId "\[destination_cpu=a53-0, exception_level=el-3, trustzone\]\t$bl31_path"
+    } else {
+        puts "WARNING! No bl31 binary found, skipping inclusion in BOOT.BIN."
     }
+    # Note: No kernel image or dtb since we load them through PXE in u-boot
+    # if {$sysdtb_path != ""} {
+    #     puts $fileId "\[destination_cpu=a53-0, load=0x100000\] $sysdtb_path"
+    # } else {
+    #     puts "WARNING! No system.dtb binary found, skipping inclusion in BOOT.BIN."
+    # }
+    if {$uboot_path != ""} {
+        puts $fileId "\[destination_cpu=a53-0, exception_level=el-2\] $uboot_path"
+    } else {
+        puts "WARNING! No uboot binary found, skipping inclusion in BOOT.BIN."
+    }
+    # Note: Bitstream is loaded dynamically with fpgamanager at run time
+    # if {$bit_path != ""} {
+    #     puts $fileId "\[destination_device=pl\] $bit_path"
+    # } else {
+    #     puts "WARNING! No bitstream found, skipping inclusion in BOOT.BIN."
+    # }
     puts $fileId "}"
     close $fileId
     puts "BIF file created successfully"
@@ -80,10 +104,31 @@ proc create_boot {} {
     }
 
     # Generate FSBL
-    hsi::generate_app -app zynqmp_fsbl -proc $fsbl_proc -dir $fsbl_dir -compile
+    set fsbl_design [hsi::create_sw_design fsbl_1 -proc $fsbl_proc -app zynqmp_fsbl]
+
+    # Set compiler and flags
+    common::set_property APP_COMPILER "aarch64-none-elf-gcc" $fsbl_design
+
+    # Create app skeleton to get the flags
+    hsi::generate_app -dir $fsbl_dir -compile
+
+    # Capture the flags
+    set current_flags [common::get_property APP_COMPILER_FLAGS $fsbl_design]
+    # Add new flags
+    common::set_property -name APP_COMPILER_FLAGS \
+        -value "$current_flags -DRSA_SUPPORT -DXPS_BOARD_ZCU104" \
+        -objects $fsbl_design
+
+    # Note: If the error of a missing library occurs (missing xiicps.h), I2C1 might be missing,
+    # https://adaptivesupport.amd.com/s/article/73673?language=en_US
+    # Note 2: Both I2C1 and UART0 are required for the FSBL to instanciate them correctly
 
     # Generate PMUFW
     hsi::generate_app -app zynqmp_pmufw -proc $pmu_proc -dir $pmufw_dir -compile
+
+    # Rename generated ELF files to expected names
+    file rename -force "$fsbl_dir/executable.elf" "$fsbl_dir/zynqmp_fsbl.elf"
+    file rename -force "$pmufw_dir/executable.elf" "$pmufw_dir/pmufw.elf"
 
     create_bif
 

@@ -17,7 +17,7 @@ set bit_path [glob -nocomplain -directory $proj_dir *.bit]
 set uboot_path [glob -nocomplain -directory "$plnx_proj_path/images/linux" u-boot.elf]
 set bl31_path [glob -nocomplain -directory "$plnx_proj_path/images/linux" bl31.elf]
 # Note: No kernel image or dtb since we load them through PXE in u-boot
-# set sysdtb_path [glob -nocomplain -directory "$plnx_proj_path/images/linux" system.dtb]
+set sysdtb_path [glob -nocomplain -directory "$plnx_proj_path/images/linux" system.dtb]
 
 file mkdir $boot_dir
 set fsbl_dir "$boot_dir/zynqmp_fsbl"
@@ -63,11 +63,11 @@ proc create_bif {} {
         puts "WARNING! No bl31 binary found, skipping inclusion in BOOT.BIN."
     }
     # Note: No kernel image or dtb since we load them through PXE in u-boot
-    # if {$sysdtb_path != ""} {
-    #     puts $fileId "\[destination_cpu=a53-0, load=0x100000\] $sysdtb_path"
-    # } else {
-    #     puts "WARNING! No system.dtb binary found, skipping inclusion in BOOT.BIN."
-    # }
+    if {$sysdtb_path != ""} {
+        puts $fileId "\[destination_cpu=a53-0, load=0x100000\] $sysdtb_path"
+    } else {
+        puts "WARNING! No system.dtb binary found, skipping inclusion in BOOT.BIN."
+    }
     if {$uboot_path != ""} {
         puts $fileId "\[destination_cpu=a53-0, exception_level=el-2\] $uboot_path"
     } else {

@@ -81,8 +81,11 @@ foreach file [glob -nocomplain "$constr_dir/*.xdc"] {
     add_files -fileset constrs_1 $file
 }
 
-import_files -force -norecurse
-update_compile_order -fileset sources_1
+update_compile_order -fileset constrs_1
+
+
+# Note: If you prefer working on the copy of files, uncomment next line
+# import_files -force -norecurse
 
 # ---- Block design ----
 set bd_tcl [file join $base_dir "../bd/${proj_name}.tcl"]

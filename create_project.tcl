@@ -17,6 +17,7 @@ set base_dir [file normalize [file dirname [info script]]]
 set proj_dir [file join $base_dir "../build/$proj_name"]
 set report_dir [file join $base_dir "../build/reports"]
 set rtl_dir [file normalize [file join $base_dir "../rtl"]]
+set sim_dir [file normalize [file join $base_dir "../sim/"]]
 set constr_dir [file normalize [file join $base_dir "../constraints/${proj_name}"]]
 set bd_dir [file normalize [file join $base_dir "../bd"]]
 set ip_dir  [file normalize [file join $base_dir "../ip"]]
@@ -43,6 +44,27 @@ foreach ext {v sv vhd} {
         add_files -fileset sources_1 $file
     }
 }
+
+update_compile_order -fileset sources_1
+
+# - Simulation
+
+# Create 'sim_1' fileset (if not found)
+if {[string equal [get_filesets -quiet sim_1] ""]} {
+  create_fileset -srcset sim_1
+}
+
+# Set 'sim_1' fileset object
+set obj [get_filesets sim_1]
+
+# Add files with glob
+foreach ext {v sv vhd} {
+    foreach file [glob -nocomplain -directory $sim_dir -types f ./*.$ext] {
+        add_files -fileset sim_1 $file
+    }
+}
+
+update_compile_order -fileset sim_1
 
 # - Constraints
 

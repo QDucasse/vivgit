@@ -3,28 +3,39 @@
 #------------------------------------------------------------------------
 
 # ---- Project variables ----
-
-# ---- Project variables ----
-if {[llength $argv] > 0} {
-    set proj_name [lindex $argv 0]
+if {[info exists ::env(PROJECT)]} {
+    set proj_name $::env(PROJECT)
 } else {
-     error "Supply a name for the project: vivado -mode batch -tclargs <proj_name>"
+    error "PROJECT environment variable not set"
 }
 
-set part_name "xczu7ev-ffvc1156-2-e"
+# Optional: allow PROJECT_ROOT override
+if {[info exists ::env(PROJECT_ROOT)]} {
+    set base_dir $::env(PROJECT_ROOT)
+} else {
+    # fallback: project root is one level above scripts
+    set base_dir [file normalize [file join [file dirname [info script]] ../../]]
+}
 
-set base_dir [file normalize [file dirname [info script]]]
-set proj_dir [file join $base_dir "../build/$proj_name"]
-set report_dir [file join $base_dir "../build/reports"]
-set rtl_dir [file normalize [file join $base_dir "../rtl"]]
-set sim_dir [file normalize [file join $base_dir "../sim/"]]
-set constr_dir [file normalize [file join $base_dir "../constraints/${proj_name}"]]
-set bd_dir [file normalize [file join $base_dir "../bd"]]
-set ip_dir  [file normalize [file join $base_dir "../ip"]]
+# Fixed project settings
+if {[info exists ::env(PART_NAME)]} {
+    set part_name $::env(PART_NAME)
+} else {
+    error "PART_NAME environment variable not set"
+}
+
+# Paths relative to project root
+set proj_dir    [file join $base_dir build $proj_name]
+set report_dir  [file join $base_dir build reports]
+set rtl_dir     [file join $base_dir rtl]
+set sim_dir     [file join $base_dir sim]
+set constr_dir  [file join $base_dir constraints $proj_name]
+set bd_dir      [file join $base_dir bd]
+set ip_dir      [file join $base_dir ip]
 
 # ---- Project creation ----
 
-file mkdir ../build
+file mkdir "${base_dir}/build"
 create_project $proj_name $proj_dir -part $part_name -force
 
 # ---- Add sources ----
@@ -88,7 +99,7 @@ update_compile_order -fileset constrs_1
 # import_files -force -norecurse
 
 # ---- Block design ----
-set bd_tcl [file join $base_dir "../bd/${proj_name}.tcl"]
+set bd_tcl [file join $bd_dir "${proj_name}.tcl"]
 if {[file exists $bd_tcl]} {
     source $bd_tcl
 } else {

@@ -1,31 +1,51 @@
-# generate_boot.tcl
-# Usage: xsct generate_boot.tcl <proj_name>
+#----------------------------------------------------------------------------
+# generate_sdt.tcl: generates the BOOT.BIN from the XSA and petalinux build
+#----------------------------------------------------------------------------
 
-if { $argc != 2 } {
-    puts "Usage: xsct generate_boot.tcl <proj_name> <plnx_proj_path>"
-    exit 1
+# ---- Project variables ----
+if {[info exists ::env(PROJECT)]} {
+    set proj_name $::env(PROJECT)
+} else {
+    error "PROJECT environment variable not set"
 }
 
-set proj_name [lindex $argv 0]
-set plnx_proj_path [lindex $argv 1]
-# Path setup
-set base_dir [file normalize [file dirname [info script]]]
-set proj_dir [file join $base_dir "../../build/$proj_name"]
-set xsa_path "$proj_dir/${proj_name}.xsa"
-set boot_dir "$proj_dir/${proj_name}.boot"
-set bit_path [glob -nocomplain -directory $proj_dir *.bit]
-set uboot_path [glob -nocomplain -directory "$plnx_proj_path/images/linux" u-boot.elf]
-set bl31_path [glob -nocomplain -directory "$plnx_proj_path/images/linux" bl31.elf]
+# Optional: allow PROJECT_ROOT override
+if {[info exists ::env(PROJECT_ROOT)]} {
+    set base_dir $::env(PROJECT_ROOT)
+} else {
+    # fallback: project root is one level above scripts
+    set base_dir [file normalize [file join [file dirname [info script]] ../../]]
+}
+
+if {[info exists ::env(PLNX_PROJECT)]} {
+    set plnx_proj_path $::env(PLNX_PROJECT)
+} else {
+    error "PLNX_PROJECT environment variable not set"
+}
+
+# Dirs/Paths setup
+# -- vivado related
+set proj_dir    [file join $base_dir build $proj_name]
+set sdt_dir     [file join $proj_dir "${proj_name}.sdt"]
+set boot_dir    [file join $proj_dir "${proj_name}.boot"]
+set xsa_path    "$proj_dir/${proj_name}.xsa"
+set boot_dir    "$proj_dir/${proj_name}.boot"
+# -- plnx related
+set bit_path    [glob -nocomplain -directory $proj_dir *.bit]
+set uboot_path  [glob -nocomplain -directory "$plnx_proj_path/images/linux" u-boot.elf]
+set bl31_path   [glob -nocomplain -directory "$plnx_proj_path/images/linux" bl31.elf]
 # Note: No kernel image or dtb since we load them through PXE in u-boot
 set sysdtb_path [glob -nocomplain -directory "$plnx_proj_path/images/linux" system.dtb]
 
+# Ensure output directory exists
 file mkdir $boot_dir
-set fsbl_dir "$boot_dir/zynqmp_fsbl"
-set fsbl_path "$fsbl_dir/zynqmp_fsbl.elf"
-set pmufw_dir "$boot_dir/pmu_fw"
-set pmufw_path "$pmufw_dir/pmufw.elf"
-set bif_path "$boot_dir/bootgen.bif"
-set boot_bin_path "$boot_dir/BOOT.BIN"
+
+set fsbl_dir       "$boot_dir/zynqmp_fsbl"
+set fsbl_path      "$fsbl_dir/zynqmp_fsbl.elf"
+set pmufw_dir      "$boot_dir/pmu_fw"
+set pmufw_path     "$pmufw_dir/pmufw.elf"
+set bif_path       "$boot_dir/bootgen.bif"
+set boot_bin_path  "$boot_dir/BOOT.BIN"
 
  # ---- Utility procedures ----
 proc get_device_family {} {
@@ -143,3 +163,6 @@ proc create_boot {} {
 }
 
 create_boot
+
+# Cleanup psu_init files that got here for no reason...
+file delete -force {*}[glob -nocomplain -directory $proj_dir psu_init*]

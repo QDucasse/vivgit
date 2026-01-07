@@ -5,13 +5,25 @@ This project provides a collection of TCL scripts to version a Vivado project us
 
 ### Installation
 
-The expected project structure for your Vivado project is the following:
+Starting from an empty git project, you can add it as a submodule with:
+```bash
+git init
+git submodule add https://github.com/QDucasse/vivgit scripts
+git submodule update --init
+```
+
+You can then launch the `bootstrap.sh` script with:
+```bash
+./scripts/bootstrap.sh
+```
+
+That creates the main directories of the project structure, and copies `Makefile` and `.gitignore`:
 
 ```bash
 .
 ├── bd
 │   ├── bd1.tcl    # Block design
-│   └── bd2.tcl    # Block design
+│   └── ...
 ├── build          # Build directory, where everything gets generated
 ├── constraints    # Any constraint file, organized by project
 │   ├── proj1
@@ -19,45 +31,40 @@ The expected project structure for your Vivado project is the following:
 │   └── proj2
 │       └── timing.xdc
 ├── ip             # Any .xci IP file
+│   └── ...
+├── Makefile       # THIS REPOSITORY! < Copied from scripts
 ├── README.md      # Readme for your project
 ├── rtl            # RTL files for your modules
-│   ├── module1
-│   └── module2
+│   ├── module1    # RTL sources
+│   └── ...
 ├── scripts        # THIS REPOSITORY!
-│   ├── create_project.tcl
-│   ├── run_synth_impl.tcl
-│   └── update_bd.tcl
+│   └── ...
+├── .gitignore     # THIS REPOSITORY! < Copied from scripts
 ```
 
-Starting from an empty git project, you can add it as a submodule with:
-```bash
-git init
-git submodule add https://github.com/QDucasse/vivgit scripts
-```
-
-You can then copy the `.gitignore` in your root directory with:
-```bash
-cp scripts/.gitignore .gitignore
-```
 
 ### Usage
 
-The objective of these scripts is to be compatible with the Vivado GUI while versioning the changes. To start using the three included scripts, the only thing you need is to export your block design as a TCL file and place it under the `bd/` directory, from the Vivado GUI:
+The objective of these scripts is to be compatible with the Vivado GUI while versioning the changes. To start using `vivgit`, you can create a new project form a template, consisting only of the Zynq IP, as it is in Xilinx BSP's:
 
 ```bash
-write_bd_tcl ./mybd.tcl -force
+make PROJECT=<name> new
 ```
 
-The repository contains three basic scripts:
-- `create_project.tcl`: sets up the project based on the block design in `bd/<bd_name>.tcl`, the resulting project can be opened with vivado using the resulting `<proj_name>.xpr` in the `build/<proj_name>/` directory.
-- `run_synth_impl.tcl`: launches the synthesis and implementation steps for the design, copying any generated reports into the `build/reports/` directory.
-- `update_bd.tcl`: apply changes in the GUI to the `bd/<proj_name>.tcl` file.
+The following `make` targets are provided:
 
-You can now completely recreate the project with `create_project.tcl`, it gets created in `build/<proj_name>`. All scripts expect the name of the project to be supplied as argument (that corresponds to your block design as well). You can pass it with:
-```bash
-vivado -mode batch scripts/create_project.tcl -tclargs <proj_name>
-# Or from the interactive mode
-vivado -mode tcl
-Vivado% set argv {"<proj_name>"}
-Vivado% source scripts/create_project.tcl
-```
+| make command   | description                                                                            | tool   |
+| -------------- | -------------------------------------------------------------------------------------- | ------ |
+| `new`          | Creates a new block design from the Zynq template in the BSP                           | shell  |
+| `project`      | Creates a new Vivado project (`.xpr`) from a given block design                        | vivado |
+| `synth`        | Performs synthesis/implementation for the project, generates `.xsa` and `.bit`         | vivado |
+| `update`       | Updates the `.tcl` script with the changes made in the GUI                             | vivado |
+| `sdt`          | Generates the `sdt` from the `xsa`                                                     | xsct   |
+| `boot`         | Generates the `BOOT.BIN` from the `.xsa` and associated petalinux build                | xsct   |
+| `bsp`          | Generates the BSP using the `.xsa`, allowing the development of (e.g.) Microblaze apps | vitis  |
+
+
+### Misc
+
+
+Note that each tool has its command wrapped in a given script in `env/`, this simplifies the environment variables passing from `make` to the end programs.

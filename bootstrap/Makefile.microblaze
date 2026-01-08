@@ -38,23 +38,28 @@ LDS := $(firstword $(wildcard $(SRC_DIR)/$(MB_PROJECT)/*.ld))
 # --- Toolchain
 CC      := riscv64-unknown-elf-gcc
 OBJCOPY := riscv64-unknown-elf-objcopy
+OBJDUMP := riscv64-unknown-elf-objdump
 CFLAGS  := -O0 -g -DSDT  -MMD -MP  -march=rv32i_zicsr_zifencei_zba_zbb_zicbom -mabi=ilp32
 LDFLAGS := -L$(BSP_LIB) -lxilstandalone -lxil -lc -lm -lgcc -specs=$(SPECS_FILE)
 
 # Trying with -T $(LDS), but it overwrites the main linker script...
 
 # --- Wrapped commands
-RUN_CC     := $(SCRIPTS_DIR)/env/run_cmd.sh $(CC)
-RUN_OBJCPY := $(SCRIPTS_DIR)/env/run_cmd.sh $(OBJCOPY)
+RUN_CC      := $(SCRIPTS_DIR)/env/run_cmd.sh $(CC)
+RUN_OBJCPY  := $(SCRIPTS_DIR)/env/run_cmd.sh $(OBJCOPY)
+RUN_OBJDUMP := $(SCRIPTS_DIR)/env/run_cmd.sh $(OBJDUMP)
 
 # --- Targets
-all: $(MB_PROJECT).elf $(MB_PROJECT).bin
+all: $(MB_PROJECT).elf $(MB_PROJECT).bin $(MB_PROJECT).dump
 
 $(MB_PROJECT).elf: $(OBJS)
 	$(RUN_CC) $(CFLAGS) -I$(BSP_INC) $^ $(LDFLAGS) -o $@
 
 $(MB_PROJECT).bin: $(MB_PROJECT).elf
 	$(RUN_OBJCPY) -O binary $< $@
+
+$(MB_PROJECT).dump: $(MB_PROJECT).elf
+	$(RUN_OBJDUMP) -d $< > $@
 
 %.o: %.c
 	$(RUN_CC) $(CFLAGS) -I$(BSP_INC) -c $< -o $@

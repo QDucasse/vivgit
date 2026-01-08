@@ -64,9 +64,11 @@ src/**/*.o
 src/**/*.d
 src/**/*.elf
 src/**/*.bin
+src/**/*.dump
 
 # Microblaze binaries
 microblaze/**/*.o
 microblaze/**/*.d
 microblaze/**/*.elf
 microblaze/**/*.bin
+microblaze/**/*.dump

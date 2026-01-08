@@ -48,10 +48,6 @@ synth:
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) \
 	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/run_synth_impl.tcl
 
-update:
-	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) \
-	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/update_bd.tcl
-
 # -- xsct
 sdt:
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) BOARD_DTS=$(BOARD_DTS) \
@@ -65,3 +61,9 @@ boot:
 bsp:
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) \
 	$(RUN_VITIS) $(SCRIPTS_DIR)/vitis/generate_bsp.py
+
+# -- others
+overlay:
+	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) \
+	python $(SCRIPTS_DIR)/helpers/generate_overlay.py
+	dtc -@ -I dts -O dtb -o $(BUILD_DIR)/$(PROJECT).dtbo $(BUILD_DIR)/$(PROJECT)_overlay.dtsi

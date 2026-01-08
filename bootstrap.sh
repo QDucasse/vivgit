@@ -13,7 +13,7 @@ done
 
 # Copy Makefile from bootstrap
 echo "Copying Makefile..."
-cp -v "$PROJECT_ROOT/scripts/bootstrap/Makefile" "$PROJECT_ROOT/Makefile"
+cp -v "$PROJECT_ROOT/scripts/bootstrap/Makefile.main" "$PROJECT_ROOT/Makefile"
 
 # Copy .gitignore
 echo "Copying .gitignore..."

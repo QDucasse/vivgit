@@ -58,3 +58,15 @@
 
 # Local scripts or test artifacts
 /local/
+
+# Script binaries
+src/**/*.o
+src/**/*.d
+src/**/*.elf
+src/**/*.bin
+
+# Microblaze binaries
+microblaze/**/*.o
+microblaze/**/*.d
+microblaze/**/*.elf
+microblaze/**/*.bin

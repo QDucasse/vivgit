@@ -25,6 +25,7 @@ BOARD_DTS ?= zcu104-revc
 PROJECT_ROOT ?= $(CURDIR)
 SCRIPTS_DIR ?= $(PROJECT_ROOT)/scripts
 BUILD_DIR := $(PROJECT_ROOT)/build/$(PROJECT)
+MB_DIR := $(PROJECT_ROOT)/microblaze
 
 # ---- Run commands, using scripts that setup the env ----
 RUN_VITIS  := $(SCRIPTS_DIR)/env/run_vitis.sh
@@ -32,7 +33,12 @@ RUN_VIVADO := $(SCRIPTS_DIR)/env/run_vivado.sh
 RUN_XSCT   := $(SCRIPTS_DIR)/env/run_xsct.sh
 
 
-.PHONY: new project synth impl bit xsa
+.PHONY: new project synth impl bit xsa overlay
+
+default: help
+
+help:
+	@echo vivgit main interface, available commands:
 
 # -- shell
 new:
@@ -47,6 +53,10 @@ project:
 synth:
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) \
 	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/run_synth_impl.tcl
+
+update:
+	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) \
+	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/update_bd.tcl
 
 # -- xsct
 sdt:
@@ -67,3 +77,16 @@ overlay:
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) \
 	python $(SCRIPTS_DIR)/helpers/generate_overlay.py
 	dtc -@ -I dts -O dtb -o $(BUILD_DIR)/$(PROJECT).dtbo $(BUILD_DIR)/$(PROJECT)_overlay.dtsi
+
+# -- microblaze
+new-mb:
+	@mkdir $(MB_DIR)/$(MB_PROJECT)
+	@cp $(SCRIPTS_DIR)/bootstrap/Makefile.microblaze $(MB_DIR)/$(MB_PROJECT)/Makefile
+
+elf-mb:
+	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) MB_PROJECT=$(MB_PROJECT) \
+	$(MAKE) -C $(MB_DIR)/$(MB_PROJECT)
+
+clean-mb:
+	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) MB_PROJECT=$(MB_PROJECT) \
+	$(MAKE) -C $(MB_DIR)/$(MB_PROJECT) clean

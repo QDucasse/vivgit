@@ -1,0 +1,63 @@
+# --- Xilinx installation info ----
+XILINX_ROOT    ?= /opt/Xilinx
+XILINX_VERSION ?= 2024.2
+export XILINX_ROOT
+export XILINX_VERSION
+
+# --- Project info
+PROJECT ?= unset
+
+ifeq ($(PROJECT),unset)
+$(error PROJECT not set, please specify the name of the target project)
+endif
+
+MB_PROJECT ?= $(notdir $(CURDIR))
+
+# Directory of the current Makefile
+MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+
+# Project root is the parent of the Makefile directory
+PROJECT_ROOT ?= $(abspath $(MAKEFILE_DIR)/../..)
+
+# --- Dirs and file locations
+SRC_DIR     := $(PROJECT_ROOT)/microblaze
+SCRIPTS_DIR := $(PROJECT_ROOT)/scripts
+BUILD_DIR   := $(PROJECT_ROOT)/build/$(PROJECT)
+
+BSP_DIR     := $(BUILD_DIR)/$(PROJECT).vitis/$(PROJECT)_platform/microblaze_riscv_0/standalone_microblaze_riscv_0/bsp
+BSP_INC     := $(BSP_DIR)/include
+BSP_LIB     := $(BSP_DIR)/lib
+SPECS_FILE  := $(BSP_DIR)/Xilinx.spec
+
+# --- Sources
+SRCS := $(wildcard $(SRC_DIR)/$(MB_PROJECT)/*.c)
+OBJS := $(patsubst $(SRC_DIR)/$(MB_PROJECT)/%.c,$(SRC_DIR)/$(MB_PROJECT)/%.o,$(SRCS))
+DEPS := $(patsubst $(SRC_DIR)/$(MB_PROJECT)/%.c,$(SRC_DIR)/$(MB_PROJECT)/%.d,$(SRCS))
+LDS := $(firstword $(wildcard $(SRC_DIR)/$(MB_PROJECT)/*.ld))
+
+# --- Toolchain
+CC      := riscv64-unknown-elf-gcc
+OBJCOPY := riscv64-unknown-elf-objcopy
+CFLAGS  := -O0 -g -DSDT  -MMD -MP  -march=rv32i_zicsr_zifencei_zba_zbb_zicbom -mabi=ilp32
+LDFLAGS := -L$(BSP_LIB) -lxilstandalone -lxil -lc -lm -lgcc -specs=$(SPECS_FILE)
+
+# Trying with -T $(LDS), but it overwrites the main linker script...
+
+# --- Wrapped commands
+RUN_CC     := $(SCRIPTS_DIR)/env/run_cmd.sh $(CC)
+RUN_OBJCPY := $(SCRIPTS_DIR)/env/run_cmd.sh $(OBJCOPY)
+
+# --- Targets
+all: $(MB_PROJECT).elf $(MB_PROJECT).bin
+
+$(MB_PROJECT).elf: $(OBJS)
+	$(RUN_CC) $(CFLAGS) -I$(BSP_INC) $^ $(LDFLAGS) -o $@
+
+$(MB_PROJECT).bin: $(MB_PROJECT).elf
+	$(RUN_OBJCPY) -O binary $< $@
+
+%.o: %.c
+	$(RUN_CC) $(CFLAGS) -I$(BSP_INC) -c $< -o $@
+
+clean:
+	rm -f $(OBJS) $(DEPS) $(MB_PROJECT).elf $(MB_PROJECT).bin

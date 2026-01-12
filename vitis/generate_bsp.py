@@ -34,6 +34,21 @@ platform = client.create_platform_component(
     cpu="microblaze_riscv_0",
     no_boot_bsp=True
 )
+
+domain = platform.get_domain("standalone_microblaze_riscv_0")
+
+domain.set_config(
+    option="os",
+    param="standalone_stdout",
+    value="axi_uartlite_0"
+)
+
+domain.set_config(
+    option="os",
+    param="standalone_stdin",
+    value="axi_uartlite_0"
+)
+
 platform.build()
 
 # Note: The FSBL is already handled by the Zynq part, see xsct/generate_boot.tcl for more info.

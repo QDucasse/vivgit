@@ -17,9 +17,10 @@ endif
 PLNX_PROJECT ?=
 
 # ---- Project specific, change them for your board ----
-NJOBS     ?= 8
-PART_NAME ?= xczu7ev-ffvc1156-2-e
-BOARD_DTS ?= zcu104-revc
+NJOBS      ?= 8
+PART_NAME  ?= xczu7ev-ffvc1156-2-e
+BOARD_NAME ?= xilinx.com:zcu104:part0:1.1
+BOARD_DTS  ?= zcu104-revc
 
 # ---- Build/Script Dirs ----
 PROJECT_ROOT ?= $(CURDIR)
@@ -47,7 +48,7 @@ new:
 
 # -- vivado
 project:
-	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) PART_NAME=$(PART_NAME) \
+	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) PART_NAME=$(PART_NAME) BOARD_NAME=$(BOARD_NAME) \
 	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/create_project.tcl
 
 synth: project

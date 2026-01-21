@@ -38,6 +38,12 @@ set ip_dir      [file join $base_dir ip]
 file mkdir "${base_dir}/build"
 create_project $proj_name $proj_dir -part $part_name -force
 
+if {[info exists ::env(BOARD_NAME)]} {
+    set_property BOARD_PART $::env(BOARD_NAME) [current_project]
+} else {
+    error "BOARD_NAME environment variable not set"
+}
+
 # ---- Add sources ----
 # - RTL
 

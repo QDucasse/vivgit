@@ -50,7 +50,7 @@ project:
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) PART_NAME=$(PART_NAME) \
 	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/create_project.tcl
 
-synth:
+synth: project
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) \
 	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/run_synth_impl.tcl
 
@@ -76,7 +76,10 @@ bsp:
 overlay: sdt
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) \
 	python $(SCRIPTS_DIR)/helpers/generate_overlay.py
+
+dtbo:
 	dtc -@ -I dts -O dtb -o $(BUILD_DIR)/$(PROJECT).dtbo $(BUILD_DIR)/$(PROJECT)_overlay.dtsi
+# Note: dtbo does not have overlay as a dependency since the user might want to modify it themself
 
 # -- microblaze
 new-mb:

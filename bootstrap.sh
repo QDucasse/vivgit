@@ -4,7 +4,7 @@ set -e
 PROJECT_ROOT=$(pwd)
 
 # Directories to create
-dirs=("bd" "sim" "constraints" "rtl" "src" "ip")
+dirs=("bd" "sim" "constraints" "rtl" "src" "ip" "microblaze")
 
 echo "Creating project directories..."
 for d in "${dirs[@]}"; do

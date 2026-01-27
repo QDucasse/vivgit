@@ -83,7 +83,7 @@ dtbo:
 # Note: dtbo does not have overlay as a dependency since the user might want to modify it themself
 
 # -- microblaze
-new-mb:
+mb:
 	@mkdir $(MB_DIR)/$(MB_PROJECT)
 	@cp $(SCRIPTS_DIR)/bootstrap/Makefile.microblaze $(MB_DIR)/$(MB_PROJECT)/Makefile
 

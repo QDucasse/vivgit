@@ -33,14 +33,14 @@ SPECS_FILE  := $(BSP_DIR)/Xilinx.spec
 SRCS := $(wildcard $(SRC_DIR)/$(MB_PROJECT)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/$(MB_PROJECT)/%.c,$(SRC_DIR)/$(MB_PROJECT)/%.o,$(SRCS))
 DEPS := $(patsubst $(SRC_DIR)/$(MB_PROJECT)/%.c,$(SRC_DIR)/$(MB_PROJECT)/%.d,$(SRCS))
-LDS := $(firstword $(wildcard $(SRC_DIR)/$(MB_PROJECT)/*.ld))
 
 # --- Toolchain
 CC      := riscv64-unknown-elf-gcc
 OBJCOPY := riscv64-unknown-elf-objcopy
 OBJDUMP := riscv64-unknown-elf-objdump
-CFLAGS  := -O0 -g -DSDT  -MMD -MP  -march=rv32i_zicsr_zifencei_zba_zbb_zicbom -mabi=ilp32
-LDFLAGS := -L$(BSP_LIB) -lxilstandalone -lxil -lc -lm -lgcc -specs=$(SPECS_FILE)
+CFLAGS  := -O0 -g -DSDT -MMD -MP -march=rv32i_zicsr_zifencei_zba_zbb_zicbom -mabi=ilp32
+# CFLAGS  := -O0 -g -DSDT -MMD -MP -march=rv64i_zicsr_zifencei_zba_zbb_zicbom -mabi=lp6 # for rv64
+LDFLAGS := -L$(BSP_LIB) -Wl,--start-group -lxilstandalone -lxil -Wl,--end-group -lc -lm -lgcc -specs=$(SPECS_FILE) -T lscript.ld
 
 # Trying with -T $(LDS), but it overwrites the main linker script...
 

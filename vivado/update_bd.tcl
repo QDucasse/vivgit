@@ -26,7 +26,9 @@ set ip_dir      [file join $base_dir ip]
 set xpr_path [glob -nocomplain "$proj_dir/${proj_name}.xpr"]
 
 if {![file exists $xpr_path]} {
-    error "Project file (.xpr) not found: $xpr_path"
+    # Soft exit
+    puts "Project file (.xpr) not found: $xpr_path"
+    return
 }
 
 # ---- BD update ----

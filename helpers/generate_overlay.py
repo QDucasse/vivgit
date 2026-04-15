@@ -93,6 +93,9 @@ def process_dts(dts_path):
     with open(dts_path) as f:
         text = f.read()
 
+    # Fix the imux to the general interrupt controller
+    text = text.replace('&imux', '&gic')
+
     amba_pl = extract_block(text, "amba_pl")
     if not amba_pl:
         raise RuntimeError("No amba_pl found")

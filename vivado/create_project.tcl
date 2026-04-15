@@ -26,7 +26,7 @@ if {[info exists ::env(PART_NAME)]} {
 
 # Paths relative to project root
 set proj_dir    [file join $base_dir build $proj_name]
-set report_dir  [file join $base_dir build reports]
+set report_dir  [file join $base_dir build reports $proj_name]
 set rtl_dir     [file join $base_dir rtl]
 set sim_dir     [file join $base_dir sim]
 set constr_dir  [file join $base_dir constraints $proj_name]
@@ -82,6 +82,18 @@ foreach ext {v sv vhd} {
 }
 
 update_compile_order -fileset sim_1
+
+# Also copy data
+set_property -name {xsim.simulate.runtime} -value {all} -objects [get_filesets sim_1]
+
+# Copy trace data into the xsim run directory
+set_property -name {xsim.simulate.xsim.more_options} -value {} -objects [get_filesets sim_1]
+
+# Tell Vivado to include trace_data as simulation data files
+foreach f [glob -nocomplain "$sim_dir/data/*"] {
+    add_files -fileset sim_1 -norecurse $f
+    set_property file_type {Data Files} [get_files  $f]
+}
 
 # - Constraints
 

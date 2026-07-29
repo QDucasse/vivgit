@@ -90,6 +90,10 @@ dtbo:
 	dtc -@ -I dts -O dtb -o $(BUILD_DIR)/$(PROJECT).dtbo $(BUILD_DIR)/$(PROJECT)_overlay.dtsi
 # Note: dtbo does not have overlay as a dependency since the user might want to modify it themself
 
+deploy:
+	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) BOARD_DEST=$(BOARD_DEST) BOARD_HOST=$(BOARD_HOST) \
+	$(SCRIPTS_DIR)/board/deploy.sh
+
 # -- microblaze
 mb:
 	@mkdir $(MB_DIR)/$(MB_PROJECT)

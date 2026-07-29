@@ -49,7 +49,6 @@ run 2000 ns
 close_vcd
 
 # ---- Collect reports before closing ----
-set report_dir [file join $proj_dir reports sim]
 file mkdir $report_dir
 
 # Save waveform database

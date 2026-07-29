@@ -19,6 +19,9 @@ NO_UPDATE ?= 0
 # Plnx project for boot creation
 PLNX_PROJECT ?=
 
+# Optional impl_1 strategy override (see vivado/run_impl.tcl)
+IMPL_STRATEGY ?=
+
 # ---- Project specific, change them for your board ----
 NJOBS      ?= 8
 PART_NAME  ?= xczu7ev-ffvc1156-2-e
@@ -37,7 +40,7 @@ RUN_VIVADO := $(SCRIPTS_DIR)/env/run_vivado.sh
 RUN_XSCT   := $(SCRIPTS_DIR)/env/run_xsct.sh
 
 
-.PHONY: new project synth impl bit xsa overlay
+.PHONY: new project synth impl update sim sdt boot bsp overlay dtbo deploy mb elf-mb clean-mb
 
 default: help
 
@@ -55,9 +58,16 @@ ifeq ($(NO_UPDATE),0)
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) \
 	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/update_bd.tcl
 endif
+	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) PART_NAME=$(PART_NAME) BOARD_NAME=$(BOARD_NAME) \
+	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/create_project.tcl
+
 synth: project
-	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) \
-	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/run_synth_impl.tcl
+	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) NJOBS=$(NJOBS) \
+	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/run_synth.tcl
+
+impl: synth
+	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) NJOBS=$(NJOBS) IMPL_STRATEGY=$(IMPL_STRATEGY) \
+	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/run_impl.tcl
 
 update:
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) \

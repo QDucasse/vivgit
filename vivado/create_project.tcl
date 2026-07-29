@@ -57,7 +57,7 @@ set obj [get_filesets sources_1]
 
 # Add files with glob
 foreach ext {v sv vhd} {
-    foreach file [glob -nocomplain -directory $rtl_dir -types f ./**/*.$ext] {
+    foreach file [glob -nocomplain -directory $rtl_dir -types f **/*.$ext] {
         add_files -fileset sources_1 $file
     }
 }

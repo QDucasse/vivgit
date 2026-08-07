@@ -19,7 +19,9 @@ NO_UPDATE ?= 0
 # Plnx project for boot creation
 PLNX_PROJECT ?=
 
-# Optional impl_1 strategy override (see vivado/run_impl.tcl)
+# Optional: override the impl_1 run's strategy (e.g.
+# Performance_ExplorePostRoutePhysOpt) without re-synthesizing. Leave unset
+# to keep whatever strategy is already on the run.
 IMPL_STRATEGY ?=
 
 # ---- Project specific, change them for your board ----
@@ -39,8 +41,16 @@ RUN_VITIS  := $(SCRIPTS_DIR)/env/run_vitis.sh
 RUN_VIVADO := $(SCRIPTS_DIR)/env/run_vivado.sh
 RUN_XSCT   := $(SCRIPTS_DIR)/env/run_xsct.sh
 
+# ---- Block design staleness guard ----
+# Stops a build whose project BD disagrees with the checked-in bd/$(PROJECT).tcl.
+# See scripts/helpers/check_bd.sh for which direction each BD script moves.
+# Set ALLOW_STALE_BD=1 to downgrade the check to a warning.
+CHECK_BD := PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) NO_UPDATE=$(NO_UPDATE) \
+            ALLOW_STALE_BD=$(ALLOW_STALE_BD) $(SCRIPTS_DIR)/helpers/check_bd.sh
+ALLOW_STALE_BD ?= 0
 
-.PHONY: new project synth impl update sim sdt boot bsp overlay dtbo deploy mb elf-mb clean-mb
+
+.PHONY: new project synth impl check-bd update sim sdt boot bsp overlay dtbo deploy mb elf-mb clean-mb
 
 default: help
 
@@ -52,8 +62,14 @@ new:
 	cp $(SCRIPTS_DIR)/bootstrap/templates/zynq_ultra.tcl bd/$(PROJECT).tcl
 	sed -i 's/base_zynq/$(PROJECT)/g' bd/$(PROJECT).tcl
 
+# Reports whether the project's BD matches the checked-in tcl. Run it on its own
+# to check without building anything.
+check-bd:
+	@$(CHECK_BD) freshness
+
 # -- vivado
 project:
+	@$(CHECK_BD) overwrite
 ifeq ($(NO_UPDATE),0)
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) \
 	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/update_bd.tcl
@@ -65,7 +81,14 @@ synth: project
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) NJOBS=$(NJOBS) \
 	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/run_synth.tcl
 
-impl: synth
+# Implementation only -- deliberately does NOT depend on synth/project, so a
+# different IMPL_STRATEGY can be tried against an existing synthesis run.
+# (`project` runs create_project -force, which would discard that synthesis.)
+# launch_runs will still re-run synth_1 itself if it's stale. The guard below
+# catches the one case that used to pass silently: implementing a project whose
+# BD is older than the checked-in tcl.
+impl:
+	@$(CHECK_BD) freshness
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) NJOBS=$(NJOBS) IMPL_STRATEGY=$(IMPL_STRATEGY) \
 	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/run_impl.tcl
 

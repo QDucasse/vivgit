@@ -51,21 +51,15 @@ The objective of these scripts is to be compatible with the Vivado GUI while ver
 make PROJECT=<name> new
 ```
 
-From there, build the project and run synthesis/implementation (each step re-runs the ones before it, so `impl` alone takes you from block design to bitstream):
+From there, build the project and run synthesis/implementation:
 
 ```bash
 make PROJECT=<name> project   # creates/refreshes the .xpr from the block design
 make PROJECT=<name> synth     # project + synthesis
-make PROJECT=<name> impl      # synth + implementation, produces .xsa/.bit/.bin
+make PROJECT=<name> impl      # implementation only, produces .xsa/.bit/.bin
 ```
 
-To make changes in the Vivado GUI (editing the block design, adding IP, ...), open the `.xpr` under `build/<name>/` directly. Once you're happy with the changes, sync them back into the versioned `.tcl` before committing:
-
-```bash
-make PROJECT=<name> update
-```
-
-Note that `project`/`synth`/`impl` already do this automatically before running (pass `NO_UPDATE=1` to skip it if you only want to rebuild from what's already committed).
+`synth` re-runs `project` first, but **`impl` deliberately does not depend on `synth`**: `project` runs `create_project -force`, which recreates the project from scratch and discards any existing synthesis run. Keeping `impl` independent is what allows a different `IMPL_STRATEGY` to be tried against one synthesis result. Vivado's `launch_runs` will still re-run `synth_1` on its own if it considers it stale.
 
 To generate a device tree overlay and load the design on a board, chain `overlay` to `dtbo`:
 
@@ -87,7 +81,8 @@ The following `make` targets are provided:
 | `new`          | Creates a new block design from the Zynq template in the BSP                                                     | shell  |
 | `project`      | Updates the `.tcl` from GUI changes (unless `NO_UPDATE=1`), then (re)creates the Vivado project (`.xpr`) from it | vivado |
 | `synth`        | Runs `project`, then performs synthesis for the project                                                          | vivado |
-| `impl`         | Runs `synth`, then performs implementation, generates `.xsa`, `.bit` and `.bin` (optional `IMPL_STRATEGY`)       | vivado |
+| `impl`         | Performs implementation, generates `.xsa`, `.bit` and `.bin` (optional `IMPL_STRATEGY`). Does *not* re-run `synth` | vivado |
+| `check-bd`     | Reports whether the project's block design matches the checked-in `bd/<name>.tcl`, without building anything     | shell  |
 | `update`       | Updates the `.tcl` block design script with the changes made in the GUI, without touching the project            | vivado |
 | `sim`          | Runs behavioral simulation for a given testbench (`TB`), dumps a `.vcd`                                          | vivado |
 | `sdt`          | Generates the `sdt` from the `.xsa`                                                                              | xsct   |
@@ -105,7 +100,8 @@ Every target requires `PROJECT=<name>` to select which project to operate on. Th
 | variable        | default                          | used by                     | description                                                                                          |
 | --------------- | -------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `PROJECT`       | *(required)*                     | all                         | Name of the target project                                                                           |
-| `NO_UPDATE`      | `0`                             | `project`                   | Set to `1` to skip propagating GUI block design changes before (re)creating the project              |
+| `NO_UPDATE`     | `0`                              | `project`, `synth`          | Set to `1` to skip exporting the project's block design over `bd/<name>.tcl`. **Required when you hand-edited the `.tcl`**, otherwise the edit is overwritten |
+| `ALLOW_STALE_BD`| `0`                              | `project`, `impl`, `check-bd` | Set to `1` to downgrade the block design staleness guard from an error to a warning                  |
 | `IMPL_STRATEGY` | *(unset, keeps current)*         | `impl`                      | Overrides the `impl_1` run's strategy before launching (e.g. `Performance_ExplorePostRoutePhysOpt`)  |
 | `TB`            | *(required for `sim`)*           | `sim`                       | Name of the testbench module to simulate                                                             |
 | `NJOBS`         | `8`                              | `synth`, `impl`             | Number of parallel jobs used by `launch_runs`                                                        |
@@ -145,5 +141,32 @@ TODO:
 
 ### Misc
 
+#### Which way does the block design flow?
+
+Two scripts move the block design between the versioned `.tcl` and the Vivado project, in **opposite** directions:
+
+| script | direction | run by |
+| --- | --- | --- |
+| `vivado/update_bd.tcl` | project to `bd/<name>.tcl` | `update`, and `project` unless `NO_UPDATE=1` |
+| `vivado/create_project.tcl` | `bd/<name>.tcl` to project | `project`, always |
+
+So there are two distinct workflows, and picking the wrong one loses work:
+
+1. **Changed the design in the GUI?** Open the `.xpr` under `build/<name>/`, make the changes, then export them into the versioned `.tcl` before committing:
+
+    ```bash
+    make PROJECT=<name> update
+    ```
+
+2. **Hand-edited `bd/<name>.tcl` instead?** You must pass `NO_UPDATE=1`, otherwise `project` exports the project's *older* block design over your edit and silently loses it:
+
+    ```bash
+    make PROJECT=<name> NO_UPDATE=1 synth
+    ```
+#### How to invoke Vivado/Vitis commands?
 
 Note that each tool has its command wrapped in a given script in `env/`, this simplifies the environment variables passing from `make` to the end programs.
+
+#### What's in `helpers`?
+
+Scripts in `helpers/` are plain shell/python called straight from `make`, without a tool wrapper, since they need neither Vivado nor Vitis: `check_bd.sh` (block design staleness guard) and `generate_overlay.py` (device-tree overlay generation).

@@ -55,9 +55,12 @@ if {[string equal [get_filesets -quiet sources_1] ""]} {
 # Set 'sources_1' fileset object
 set obj [get_filesets sources_1]
 
-# Add files with glob
+# Add files with glob. rtl/attic holds superseded modules kept for reference.
 foreach ext {v sv vhd} {
     foreach file [glob -nocomplain -directory $rtl_dir -types f **/*.$ext] {
+        if {[lindex [file split $file] end-1] eq "attic"} {
+            continue
+        }
         add_files -fileset sources_1 $file
     }
 }

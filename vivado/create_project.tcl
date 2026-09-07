@@ -55,14 +55,28 @@ if {[string equal [get_filesets -quiet sources_1] ""]} {
 # Set 'sources_1' fileset object
 set obj [get_filesets sources_1]
 
-# Add files with glob. rtl/attic holds superseded modules kept for reference.
-foreach ext {v sv vhd} {
-    foreach file [glob -nocomplain -directory $rtl_dir -types f **/*.$ext] {
-        if {[lindex [file split $file] end-1] eq "attic"} {
-            continue
+# Add files recursively. rtl/attic holds superseded modules kept for reference.
+# Tcl's glob has no globstar, so do it manually
+proc collect_sources {dir exts} {
+    set found {}
+    foreach f [glob -nocomplain -directory $dir -types f *] {
+        set e [string tolower [string trimleft [file extension $f] .]]
+        if {[lsearch -exact $exts $e] >= 0} {
+            lappend found $f
         }
-        add_files -fileset sources_1 $file
     }
+    foreach sub [glob -nocomplain -directory $dir -types d *] {
+        lappend found {*}[collect_sources $sub $exts]
+    }
+    return $found
+}
+
+foreach file [collect_sources $rtl_dir {v sv vhd}] {
+    # Exclude attic at any depth, not just as the immediate parent.
+    if {[lsearch -exact [file split $file] attic] >= 0} {
+        continue
+    }
+    add_files -fileset sources_1 $file
 }
 
 update_compile_order -fileset sources_1

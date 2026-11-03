@@ -21,6 +21,13 @@ if {[info exists ::env(TB)]} {
     error "TB environment variable not set (e.g. TB=fuzzsight_tb)"
 }
 
+# Simulation length passed to xsim's run command, e.g. "2000 ns", "10us" or "all"
+if {[info exists ::env(SIM_TIME)] && $::env(SIM_TIME) ne ""} {
+    set sim_time $::env(SIM_TIME)
+} else {
+    set sim_time "2000 ns"
+}
+
 set proj_dir    [file join $base_dir build $proj_name]
 set report_dir  [file join $base_dir build reports $proj_name sim]
 set sim_dir     [file join $proj_dir ${proj_name}.sim sim_1 behav xsim]
@@ -40,17 +47,16 @@ launch_simulation -simset sim_1 -mode behavioral
 
 
 # ---- Open and log in vcd file ----
+file mkdir $report_dir
 open_vcd [file join $report_dir "${proj_name}_${tb_name}.vcd"]
 log_vcd /*
 
-run 2000 ns
+run {*}$sim_time
 
 # ---- Closing vcd ----
 close_vcd
 
 # ---- Collect reports before closing ----
-file mkdir $report_dir
-
 # Save waveform database
 set wcfg_file [file join $sim_dir wave.wcfg]
 if {[file exists $wcfg_file]} {
@@ -62,14 +68,6 @@ set sim_log [file join $sim_dir simulate.log]
 if {[file exists $sim_log]} {
     file copy -force $sim_log [file join $report_dir simulate.log]
 }
-
-# Capture pass/fail summary from the transcript
-set transcript_file [file join $report_dir sim_transcript.log]
-set fh [open $transcript_file w]
-# Flush Tcl's internal transcript buffer to file
-puts $fh "Simulation transcript for $tb_name"
-puts $fh "Run at: [clock format [clock seconds]]"
-close $fh
 
 # ---- Close simulator and project ----
 close_sim -force    ;# -force ensures the xsim process is actually terminated

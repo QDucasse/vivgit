@@ -24,6 +24,9 @@ PLNX_PROJECT ?=
 # to keep whatever strategy is already on the run.
 IMPL_STRATEGY ?=
 
+# Simulation length for `sim`, passed to xsim's run (e.g. "10 us", or "all")
+SIM_TIME ?= 2000 ns
+
 # ---- Project specific, change them for your board ----
 NJOBS      ?= 8
 PART_NAME  ?= xczu7ev-ffvc1156-2-e
@@ -97,7 +100,7 @@ update:
 	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/update_bd.tcl
 
 sim:
-	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) TB=$(TB) \
+	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) TB=$(TB) SIM_TIME="$(SIM_TIME)" \
 	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/run_sim.tcl
 
 # -- xsct

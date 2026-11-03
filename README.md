@@ -104,6 +104,7 @@ Every target requires `PROJECT=<name>` to select which project to operate on. Th
 | `ALLOW_STALE_BD`| `0`                              | `project`, `impl`, `check-bd` | Set to `1` to downgrade the block design staleness guard from an error to a warning                  |
 | `IMPL_STRATEGY` | *(unset, keeps current)*         | `impl`                      | Overrides the `impl_1` run's strategy before launching (e.g. `Performance_ExplorePostRoutePhysOpt`)  |
 | `TB`            | *(required for `sim`)*           | `sim`                       | Name of the testbench module to simulate                                                             |
+| `SIM_TIME`      | `2000 ns`                        | `sim`                       | Simulation length passed to xsim's `run` (e.g. `10 us`, or `all`)                                    |
 | `NJOBS`         | `8`                              | `synth`, `impl`             | Number of parallel jobs used by `launch_runs`                                                        |
 | `PART_NAME`     | `xczu7ev-ffvc1156-2-e`           | `project`                   | Target FPGA part                                                                                     |
 | `BOARD_NAME`    | `xilinx.com:zcu104:part0:1.1`    | `project`                   | Target board part                                                                                    |

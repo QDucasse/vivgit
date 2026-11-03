@@ -80,8 +80,16 @@ set bin_path "$proj_dir/${proj_name}.bin"
 write_cfgmem -force -format bin -interface smapx32 -disablebitswap -loadbit "up 0x0 $bit_path" $bin_path
 
 # ---- Copy reports ----
-file mkdir $report_dir
-file copy -force {*}[glob -nocomplain "$proj_dir/${proj_name}.runs/impl_1/*.rpt"] $report_dir
+source [file join [file dirname [info script]] copy_reports.tcl]
+set copied [copy_reports $impl_run $report_dir]
+# timing_summary.rpt: the final timing, after post-route phys_opt when the
+# strategy runs it
+foreach name {timing_summary_postroute_physopted.rpt timing_summary_routed.rpt} {
+    if {$name in $copied} {
+        file copy -force [file join $report_dir $name] [file join $report_dir timing_summary.rpt]
+        break
+    }
+}
 
 # ---- Critical warnings ----
 source [file join [file dirname [info script]] critical_warnings.tcl]
@@ -116,7 +124,7 @@ if {[llength $timing_failed] == 0} {
     puts "TIMING MET"
 } else {
     puts "TIMING FAILED: [join $timing_failed {, }]"
-    puts "  details: [file join $report_dir *timing_summary_routed.rpt]"
+    puts "  details: [file join $report_dir timing_summary.rpt]"
 }
 
 # ---- Build info, for helpers/build_summary.sh ----

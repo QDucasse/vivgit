@@ -42,8 +42,8 @@ launch_runs synth_1 -jobs $njobs
 wait_on_run synth_1
 
 # ---- Copy reports ----
-file mkdir $report_dir
-file copy -force {*}[glob -nocomplain "$proj_dir/${proj_name}.runs/synth_1/*.rpt"] $report_dir
+source [file join [file dirname [info script]] copy_reports.tcl]
+copy_reports [get_runs synth_1] $report_dir
 
 # ---- Critical warnings ----
 # All synthesis runs: synth_1 and the out-of-context IP runs

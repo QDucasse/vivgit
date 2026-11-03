@@ -79,6 +79,10 @@ write_cfgmem -force -format bin -interface smapx32 -disablebitswap -loadbit "up 
 file mkdir $report_dir
 file copy -force {*}[glob -nocomplain "$proj_dir/${proj_name}.runs/impl_1/*.rpt"] $report_dir
 
+# ---- Critical warnings ----
+source [file join [file dirname [info script]] critical_warnings.tcl]
+report_critical_warnings $impl_run [file join $report_dir critical_warnings.txt]
+
 puts "IMPL_WNS: [get_property STATS.WNS $impl_run]"
 puts "IMPL_TNS: [get_property STATS.TNS $impl_run]"
 puts "IMPL_WHS: [get_property STATS.WHS $impl_run]"

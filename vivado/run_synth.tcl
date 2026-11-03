@@ -45,4 +45,9 @@ wait_on_run synth_1
 file mkdir $report_dir
 file copy -force {*}[glob -nocomplain "$proj_dir/${proj_name}.runs/synth_1/*.rpt"] $report_dir
 
+# ---- Critical warnings ----
+# All synthesis runs: synth_1 and the out-of-context IP runs
+source [file join [file dirname [info script]] critical_warnings.tcl]
+report_critical_warnings [get_runs -filter {IS_SYNTHESIS}] [file join $report_dir critical_warnings.txt]
+
 close_project

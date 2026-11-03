@@ -90,6 +90,10 @@ ALLOW_STALE_BD ?= 0
 CHECK_BD := PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) NO_UPDATE=$(NO_UPDATE) \
             ALLOW_STALE_BD=$(ALLOW_STALE_BD) $(SCRIPTS_DIR)/helpers/check_bd.sh
 
+# build/reports/<PROJECT>/summary.txt, refreshed by impl, cdc and deploy
+BUILD_SUMMARY := PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) SCRIPTS_DIR=$(SCRIPTS_DIR) \
+                 $(SCRIPTS_DIR)/helpers/build_summary.sh
+
 # Set ALLOW_MISSING_PINS=1 to build a project whose BD tcl connects pins that no
 # longer exist (dropping those connections) instead of failing.
 ALLOW_MISSING_PINS ?= 0
@@ -172,12 +176,14 @@ synth: project
 impl:
 	@$(CHECK_BD) freshness
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) NJOBS=$(NJOBS) IMPL_STRATEGY=$(IMPL_STRATEGY) \
-	TIMING_STRICT=$(TIMING_STRICT) $(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/run_impl.tcl
+	TIMING_STRICT=$(TIMING_STRICT) $(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/run_impl.tcl; \
+	rc=$$?; $(BUILD_SUMMARY) --record-git; exit $$rc
 
 # Clock domain crossing reports of the last impl (or synth) run, reruns nothing
 cdc:
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) CDC_STRICT=$(CDC_STRICT) \
-	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/run_cdc.tcl
+	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/run_cdc.tcl; \
+	rc=$$?; $(BUILD_SUMMARY); exit $$rc
 
 update:
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) \
@@ -212,6 +218,7 @@ dtbo:
 # Note: dtbo does not have overlay as a dependency since the user might want to modify it themself
 
 deploy:
+	@$(BUILD_SUMMARY)
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) BOARD_DEST=$(BOARD_DEST) BOARD_HOST=$(BOARD_HOST) \
 	MB_PROJECT=$(MB_PROJECT) $(SCRIPTS_DIR)/board/deploy.sh
 

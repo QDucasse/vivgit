@@ -86,11 +86,18 @@ set total 0
 foreach {sev n} $count {
     incr total $n
 }
-puts "CDC ($run): $total crossings: $n_crit Critical, [dict get $count Warning] Warning, [dict get $count Info] Info ($waived waived)"
+set cdc_line "$total crossings: $n_crit Critical, [dict get $count Warning] Warning, [dict get $count Info] Info ($waived waived)"
+puts "CDC ($run): $cdc_line"
 foreach {check n} [lsort -stride 2 -index 0 $checks] {
     puts [format "  %5dx %s" $n $check]
 }
 puts "  reports in $report_dir"
+
+# For helpers/build_summary.sh
+set fh [open [file join $report_dir cdc_counts.txt] w]
+puts $fh "run: $run"
+puts $fh "cdc: $cdc_line"
+close $fh
 
 close_project
 

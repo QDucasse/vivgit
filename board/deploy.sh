@@ -31,6 +31,25 @@ fi
 [ -f "$BIN" ] || { echo "Missing $BIN -- run '$BIN_HINT' first" >&2; exit 1; }
 [ -f "$BUILD_DIR/$PROJECT.dtbo" ] || { echo "Missing $BUILD_DIR/$PROJECT.dtbo -- run 'make PROJECT=$PROJECT dtbo' first" >&2; exit 1; }
 
+# Build summary (helpers/build_summary.sh), staged as ${PROJECT}_summary.txt.
+# With MB_PROJECT, the staged copy also names the app and the staged .bin.
+SUMMARY="$PROJECT_ROOT/build/reports/$PROJECT/summary.txt"
+STAGED_SUMMARY=""
+if [ -f "$SUMMARY" ]; then
+    STAGED_SUMMARY="$SUMMARY"
+    if [ -n "$MB_PROJECT" ]; then
+        STAGED_SUMMARY="$PROJECT_ROOT/build/reports/$PROJECT/summary_$MB_PROJECT.txt"
+        {
+            cat "$SUMMARY"
+            echo
+            echo "staged:    $(basename "$BIN") as $PROJECT.bin, Microblaze app $MB_PROJECT in BRAM (bit-mb)"
+            echo "           sha256 $(sha256sum "$BIN" | cut -d' ' -f1)"
+        } > "$STAGED_SUMMARY"
+    fi
+else
+    echo "No build summary ($SUMMARY), staging without one"
+fi
+
 # Group-write, so BOARD_DEST can be shared between NFS and SSH writers with
 # different UIDs. Group ownership itself comes from BOARD_DEST's setgid bit.
 # No group name needed here, that's on the developer to set up.
@@ -39,12 +58,17 @@ if [ -n "$BOARD_HOST" ]; then
     ssh "$BOARD_HOST" "mkdir -p '$DEST'"
     scp "$BIN" "$BOARD_HOST:$DEST/$PROJECT.bin"
     scp "$BUILD_DIR/$PROJECT.dtbo" "$INSTALL_SCRIPT" "$BOARD_HOST:$DEST/"
+    # A summary left from an earlier staging would describe another bitstream
+    ssh "$BOARD_HOST" "rm -f '$DEST/${PROJECT}_summary.txt'"
+    [ -n "$STAGED_SUMMARY" ] && scp "$STAGED_SUMMARY" "$BOARD_HOST:$DEST/${PROJECT}_summary.txt"
     ssh "$BOARD_HOST" "chmod g+rw '$DEST'/* && chmod +x '$DEST/install_firmware.sh'"
 else
     echo "Staging $PROJECT to $DEST ..."
     mkdir -p "$DEST"
     rsync -rlptDvz --chmod=Fg+rw "$BIN" "$DEST/$PROJECT.bin"
     rsync -rlptDvz --chmod=Fg+rw "$BUILD_DIR/$PROJECT.dtbo" "$INSTALL_SCRIPT" "$DEST/"
+    rm -f "$DEST/${PROJECT}_summary.txt"
+    [ -n "$STAGED_SUMMARY" ] && rsync -rlptDvz --chmod=Fg+rw "$STAGED_SUMMARY" "$DEST/${PROJECT}_summary.txt"
 fi
 
 [ -n "$MB_PROJECT" ] && echo "Staged $(basename "$BIN") as $PROJECT.bin (Microblaze app $MB_PROJECT in BRAM)."

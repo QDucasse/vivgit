@@ -57,6 +57,10 @@ if {[info exists ::env(IMPL_STRATEGY)] && $::env(IMPL_STRATEGY) ne ""} {
     set_property strategy $requested_strategy $impl_run
 }
 
+# The build info and summary of the previous build no longer apply, even if
+# this one fails
+file delete -force [file join $report_dir impl_info.txt] [file join $report_dir .. summary.txt]
+
 # ---- Launch implementation ----
 reset_run impl_1
 launch_runs impl_1 -verbose -to_step write_bitstream -jobs $njobs
@@ -114,6 +118,22 @@ if {[llength $timing_failed] == 0} {
     puts "TIMING FAILED: [join $timing_failed {, }]"
     puts "  details: [file join $report_dir *timing_summary_routed.rpt]"
 }
+
+# ---- Build info, for helpers/build_summary.sh ----
+set fh [open [file join $report_dir impl_info.txt] w]
+puts $fh "date: [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S}]"
+puts $fh "vivado: [version -short]"
+puts $fh "part: [get_property PART [current_project]]"
+puts $fh "impl_strategy: [get_property STRATEGY $impl_run]"
+foreach s {WNS TNS WHS THS TPWS} {
+    puts $fh "[string tolower $s]: [get_property STATS.$s $impl_run]"
+}
+if {[llength $timing_failed] == 0} {
+    puts $fh "timing: MET"
+} else {
+    puts $fh "timing: FAILED: [join $timing_failed {, }]"
+}
+close $fh
 
 close_project
 

@@ -34,6 +34,10 @@ That creates the main directories of the project structure, and installs `Makefi
 ├── ip             # Any .xci IP file
 │   └── ...
 ├── Makefile       # Includes scripts/bootstrap/Makefile.main < from scripts/bootstrap/Makefile.stub
+├── microblaze     # Microblaze apps, one directory each (see Microblaze below)
+│   └── app1
+│       ├── Makefile   # Includes scripts/bootstrap/Makefile.microblaze < from `make mb`
+│       └── main.c
 ├── README.md      # Readme for your project
 ├── rtl            # RTL files for your modules
 │   ├── module1    # RTL sources
@@ -92,13 +96,14 @@ The following `make` targets are provided:
 | `sim`          | Runs behavioral simulation for a given testbench (`TB`), dumps a `.vcd`                                          | vivado |
 | `sdt`          | Generates the `sdt` from the `.xsa`                                                                              | xsct   |
 | `boot`         | Generates the `BOOT.BIN` from the `.xsa` and prebuilt `bl31.elf`/`u-boot.elf`/`system.dtb` (`BOOT_FW_DIR`)      | xsct   |
-| `bsp`          | Generates the BSP using the `.xsa`, allowing the development of (e.g.) Microblaze apps                           | vitis  |
+| `bsp`          | Generates the Microblaze BSP from the `.xsa` and `build/<name>/bsp.mk` for the app builds; keeps the previous BSP if it fails | vitis  |
 | `overlay`      | Runs `sdt`, then generates a device-tree overlay (`_overlay.dtsi`) from the `sdt`'s `pl.dtsi`                    | shell  |
 | `dtbo`         | Compiles the overlay into a `.dtbo` with `dtc`                                                                   | shell  |
-| `deploy`       | Stages the project's `.bin`/`.dtbo` and `install_firmware.sh` to a board (`BOARD_DEST`, optional `BOARD_HOST`)   | shell  |
-| `mb`           | Scaffolds a new Microblaze sub-project directory under `microblaze/` (`MB_PROJECT`)                              | shell  |
-| `elf-mb`       | Builds the `.elf`/`.bin`/`.dump` for a Microblaze sub-project (`MB_PROJECT`)                                     | shell  |
-| `clean-mb`     | Cleans the build artifacts of a Microblaze sub-project (`MB_PROJECT`)                                            | shell  |
+| `deploy`       | Stages the project's `.bin`/`.dtbo` and `install_firmware.sh` to a board (`BOARD_DEST`, optional `BOARD_HOST`; with `MB_PROJECT`, the `bit-mb` bitstream instead) | shell  |
+| `mb`           | Creates the Microblaze app `microblaze/<MB_PROJECT>/` with a stub `Makefile`, never overwriting an existing one  | shell  |
+| `elf-mb`       | Builds the `.elf`/`.bin`/`.dump` of a Microblaze app (`MB_PROJECT`)                                              | shell  |
+| `clean-mb`     | Cleans the build artifacts of a Microblaze app (`MB_PROJECT`)                                                    | shell  |
+| `bit-mb`       | Runs `elf-mb`, then writes `<name>_<MB_PROJECT>.bit`/`.bin`: the bitstream with the app in the Microblaze's BRAM  | vivado |
 
 Every target requires `PROJECT=<name>` to select which project to operate on. The following variables further configure these targets:
 
@@ -122,9 +127,9 @@ Every target requires `PROJECT=<name>` to select which project to operate on. Th
 | `ALLOW_INCOMPLETE_BOOT` | `0`                      | `boot`                      | Set to `1` to build `BOOT.BIN` without missing prebuilt files instead of failing (it will not boot Linux) |
 | `BOARD_DEST`    | *(required for `deploy`)*        | `deploy`                    | Destination directory for staged firmware (local path, or path on `BOARD_HOST`)                      |
 | `BOARD_HOST`    | *(unset, stages locally)*        | `deploy`                    | `user@host` to stage over SSH instead of a local path                                                |
-| `MB_CPU`        | `microblaze_riscv_0`             | `bsp`, `elf-mb`, `clean-mb` | Instance name of the Microblaze in the block design                                                  |
+| `MB_CPU`        | `microblaze_riscv_0`             | `bsp`, `bit-mb`             | Instance name of the Microblaze in the block design (the app builds take it from `bsp.mk`)           |
 | `MB_UART`       | `axi_uartlite_0`                 | `bsp`                       | Instance name of the UART used for stdin/stdout                                                      |
-| `MB_PROJECT`    | current directory name           | `mb`, `elf-mb`, `clean-mb`  | Name of the Microblaze sub-project                                                                   |
+| `MB_PROJECT`    | *(required for Microblaze targets)* | `mb`, `elf-mb`, `clean-mb`, `bit-mb`, `deploy` | Name of the Microblaze app, i.e. its directory in `microblaze/`                 |
 | `XILINX_ROOT`   | `/opt/Xilinx`                    | all (via `env/`)            | Root install directory of the Xilinx toolchain                                                       |
 | `XILINX_VERSION`| `2024.2`                         | all (via `env/`)            | Xilinx toolchain version, used to source `settings64.sh`                                             |
 | `PROJECT_ROOT`  | `$(CURDIR)`                      | all                         | Root of the design project (override if invoking `make` from elsewhere)                              |
@@ -192,9 +197,18 @@ make PROJECT=<name> BOOT_FW_DIR=/path/to/boot-fw/zcu104 boot
 
 ## Microblaze
 
-TODO:
+For designs with a Microblaze-V, each app lives in its own directory `microblaze/<app>/`, built against a BSP that Vitis generates from the design's `.xsa`:
 
-### Misc
+```bash
+make PROJECT=<name> bsp                            # BSP + build/<name>/bsp.mk
+make PROJECT=<name> MB_PROJECT=<app> mb            # microblaze/<app>/Makefile, then add your .c files
+make PROJECT=<name> MB_PROJECT=<app> bit-mb        # builds the app, bitstream with it in the Microblaze's BRAM
+make PROJECT=<name> MB_PROJECT=<app> BOARD_DEST=/path/on/board deploy
+```
+
+See [docs/microblaze.md](docs/microblaze.md) for the BSP, the per-app settings, the memory layout, running an app, and moving an app off a copied `Makefile`.
+
+## Misc
 
 #### Which way does the block design flow?
 

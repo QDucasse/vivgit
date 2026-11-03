@@ -17,7 +17,7 @@ You can then launch the `bootstrap.sh` script with:
 ./scripts/bootstrap.sh
 ```
 
-That creates the main directories of the project structure, and copies `Makefile` and `.gitignore`:
+That creates the main directories of the project structure, and installs `Makefile`, `config.mk` and `.gitignore` (an existing file is never overwritten):
 
 ```bash
 .
@@ -25,6 +25,7 @@ That creates the main directories of the project structure, and copies `Makefile
 │   ├── bd1.tcl    # Block design
 │   └── ...
 ├── build          # Build directory, where everything gets generated
+├── config.mk      # Board and toolchain settings < from scripts/bootstrap/config.mk.example
 ├── constraints    # Any constraint file, organized by project
 │   ├── proj1
 │   │   └── timing.xdc
@@ -32,15 +33,19 @@ That creates the main directories of the project structure, and copies `Makefile
 │       └── timing.xdc
 ├── ip             # Any .xci IP file
 │   └── ...
-├── Makefile       # THIS REPOSITORY! < Copied from scripts
+├── Makefile       # Includes scripts/bootstrap/Makefile.main < from scripts/bootstrap/Makefile.stub
 ├── README.md      # Readme for your project
 ├── rtl            # RTL files for your modules
 │   ├── module1    # RTL sources
 │   └── ...
 ├── scripts        # THIS REPOSITORY!
 │   └── ...
-├── .gitignore     # THIS REPOSITORY! < Copied from scripts
+├── .gitignore     # < Copied from scripts
 ```
+
+The installed `Makefile` only includes `scripts/bootstrap/Makefile.main`, so updating the submodule updates every target. Keep your settings in `config.mk` (see [Configuration files](#configuration-files)) rather than in the `Makefile`.
+
+To move an existing project from a copied `Makefile` to this one, move any default you changed in it to `config.mk`, then replace it with `scripts/bootstrap/Makefile.stub`.
 
 
 ### Usage

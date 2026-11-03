@@ -14,8 +14,11 @@ PROJECT_ROOT ?= $(CURDIR)
 # ---- Project name, passed from CLI ----
 PROJECT ?= unset
 
+# Every target but help (also the default goal) needs a project
 ifeq ($(PROJECT),unset)
+ifneq ($(filter-out help default,$(MAKECMDGOALS)),)
 $(error PROJECT not set, please specify the name of the target project)
+endif
 endif
 
 -include $(PROJECT_ROOT)/config/$(PROJECT).mk
@@ -85,12 +88,36 @@ CHECK_BD := PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) NO_UPDATE=$(NO_UPDAT
 ALLOW_MISSING_PINS ?= 0
 
 
-.PHONY: new project synth impl check-bd update sim sdt boot bsp overlay dtbo deploy mb elf-mb clean-mb
+.PHONY: default help new project synth impl check-bd update sim sdt boot bsp overlay dtbo deploy mb elf-mb clean-mb
 
 default: help
 
 help:
-	@echo vivgit main interface, available commands:
+	@echo "vivgit: make PROJECT=<name> <target> [VAR=value ...]"
+	@echo ""
+	@echo "Block design and Vivado project:"
+	@echo "  new        create bd/<name>.tcl from a template (TEMPLATE)"
+	@echo "  project    export GUI changes to bd/<name>.tcl (unless NO_UPDATE=1), recreate the .xpr"
+	@echo "  update     export GUI changes to bd/<name>.tcl only"
+	@echo "  check-bd   check that the project BD matches bd/<name>.tcl"
+	@echo "  synth      project + synthesis"
+	@echo "  impl       implementation, .bit/.bin/.xsa (IMPL_STRATEGY), does not re-run synth"
+	@echo "  sim        behavioral simulation of testbench TB (SIM_TIME)"
+	@echo ""
+	@echo "Software and board:"
+	@echo "  sdt        system device tree from the .xsa"
+	@echo "  overlay    sdt + device-tree overlay .dtsi"
+	@echo "  dtbo       compile the overlay into a .dtbo"
+	@echo "  boot       BOOT.BIN (BOOT_FW_DIR or PLNX_PROJECT)"
+	@echo "  deploy     stage .bin/.dtbo to a board (BOARD_DEST, BOARD_HOST)"
+	@echo "  bsp        Microblaze BSP (MB_CPU, MB_UART)"
+	@echo "  mb, elf-mb, clean-mb   Microblaze sub-project MB_PROJECT"
+	@echo ""
+	@echo "Current settings (from config.mk, config/<name>.mk or defaults):"
+	@echo "  PART_NAME=$(PART_NAME) BOARD_NAME=$(BOARD_NAME)"
+	@echo "  BOARD_DTS=$(BOARD_DTS) XILINX_VERSION=$(XILINX_VERSION) NJOBS=$(NJOBS)"
+	@echo ""
+	@echo "All variables are described in scripts/README.md."
 
 # -- shell
 # Copies the template and renames its design (the `set design_name` line that

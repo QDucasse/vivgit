@@ -222,20 +222,24 @@ update_compile_order -fileset sources_1
 
 # ---- Synthesis/Implementation properties ----
 
+# Run flows are named after the Vivado release year ("Vivado Synthesis 2024"),
+# so derive it from the running Vivado instead of hardcoding it.
+set flow_year [lindex [split [version -short] .] 0]
+
 # Create 'synth_1' run (if not found)
 if {[string equal [get_runs -quiet synth_1] ""]} {
-    create_run -name synth_1 -part $part_name -flow {Vivado Synthesis 2024} -strategy "Vivado Synthesis Defaults" -report_strategy {No Reports} -constrset constrs_1
+    create_run -name synth_1 -part $part_name -flow "Vivado Synthesis $flow_year" -strategy "Vivado Synthesis Defaults" -report_strategy {No Reports} -constrset constrs_1
 } else {
   set_property strategy "Vivado Synthesis Defaults" [get_runs synth_1]
-  set_property flow "Vivado Synthesis 2024" [get_runs synth_1]
+  set_property flow "Vivado Synthesis $flow_year" [get_runs synth_1]
 }
 
 # Create 'impl_1' run (if not found)
 if {[string equal [get_runs -quiet impl_1] ""]} {
-    create_run -name impl_1 -part $part_name -flow {Vivado Implementation 2024} -strategy "Vivado Implementation Defaults" -report_strategy {No Reports} -constrset constrs_1 -parent_run synth_1
+    create_run -name impl_1 -part $part_name -flow "Vivado Implementation $flow_year" -strategy "Vivado Implementation Defaults" -report_strategy {No Reports} -constrset constrs_1 -parent_run synth_1
 } else {
   set_property strategy "Vivado Implementation Defaults" [get_runs impl_1]
-  set_property flow "Vivado Implementation 2024" [get_runs impl_1]
+  set_property flow "Vivado Implementation $flow_year" [get_runs impl_1]
 }
 
 # ---- Close project ----

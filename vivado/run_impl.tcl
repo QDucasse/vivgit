@@ -33,7 +33,7 @@ if {[info exists ::env(NJOBS)]} {
 
 # Paths relative to project root
 set proj_dir    [file join $base_dir build $proj_name]
-set report_dir  [file join $base_dir build reports $proj_name synth]
+set report_dir  [file join $base_dir build reports $proj_name impl]
 
 # Absolute path of project inside the build project
 set xpr_path [glob -nocomplain "$proj_dir/${proj_name}.xpr"]

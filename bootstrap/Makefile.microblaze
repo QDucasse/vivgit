@@ -13,6 +13,9 @@ endif
 
 MB_PROJECT ?= $(notdir $(CURDIR))
 
+# Instance name of the Microblaze in the block design (must match `make bsp`)
+MB_CPU ?= microblaze_riscv_0
+
 # Directory of the current Makefile
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -24,7 +27,7 @@ SRC_DIR     := $(PROJECT_ROOT)/microblaze
 SCRIPTS_DIR := $(PROJECT_ROOT)/scripts
 BUILD_DIR   := $(PROJECT_ROOT)/build/$(PROJECT)
 
-BSP_DIR     := $(BUILD_DIR)/$(PROJECT).vitis/$(PROJECT)_platform/microblaze_riscv_0/standalone_microblaze_riscv_0/bsp
+BSP_DIR     := $(BUILD_DIR)/$(PROJECT).vitis/$(PROJECT)_platform/$(MB_CPU)/standalone_$(MB_CPU)/bsp
 BSP_INC     := $(BSP_DIR)/include
 BSP_LIB     := $(BSP_DIR)/lib
 SPECS_FILE  := $(BSP_DIR)/Xilinx.spec

@@ -35,6 +35,11 @@ IMPL_STRATEGY ?=
 # Simulation length for `sim`, passed to xsim's run (e.g. "10 us", or "all")
 SIM_TIME ?= 2000 ns
 
+# Microblaze and stdin/stdout UART instance names in the block design, for
+# `bsp` and the Microblaze builds
+MB_CPU  ?= microblaze_riscv_0
+MB_UART ?= axi_uartlite_0
+
 # ---- Project specific, change them for your board ----
 NJOBS      ?= 8
 PART_NAME  ?= xczu7ev-ffvc1156-2-e
@@ -128,7 +133,7 @@ boot:
 
 # -- vitis
 bsp:
-	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) \
+	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) MB_CPU=$(MB_CPU) MB_UART=$(MB_UART) \
 	$(RUN_VITIS) $(SCRIPTS_DIR)/vitis/generate_bsp.py
 
 # -- others
@@ -150,9 +155,9 @@ mb:
 	@cp $(SCRIPTS_DIR)/bootstrap/Makefile.microblaze $(MB_DIR)/$(MB_PROJECT)/Makefile
 
 elf-mb:
-	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) MB_PROJECT=$(MB_PROJECT) \
+	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) MB_PROJECT=$(MB_PROJECT) MB_CPU=$(MB_CPU) \
 	$(MAKE) -C $(MB_DIR)/$(MB_PROJECT)
 
 clean-mb:
-	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) MB_PROJECT=$(MB_PROJECT) \
+	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) MB_PROJECT=$(MB_PROJECT) MB_CPU=$(MB_CPU) \
 	$(MAKE) -C $(MB_DIR)/$(MB_PROJECT) clean

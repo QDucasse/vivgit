@@ -116,6 +116,8 @@ Every target requires `PROJECT=<name>` to select which project to operate on. Th
 | `ALLOW_INCOMPLETE_BOOT` | `0`                      | `boot`                      | Set to `1` to build `BOOT.BIN` without missing prebuilt files instead of failing (it will not boot Linux) |
 | `BOARD_DEST`    | *(required for `deploy`)*        | `deploy`                    | Destination directory for staged firmware (local path, or path on `BOARD_HOST`)                      |
 | `BOARD_HOST`    | *(unset, stages locally)*        | `deploy`                    | `user@host` to stage over SSH instead of a local path                                                |
+| `MB_CPU`        | `microblaze_riscv_0`             | `bsp`, `elf-mb`, `clean-mb` | Instance name of the Microblaze in the block design                                                  |
+| `MB_UART`       | `axi_uartlite_0`                 | `bsp`                       | Instance name of the UART used for stdin/stdout                                                      |
 | `MB_PROJECT`    | current directory name           | `mb`, `elf-mb`, `clean-mb`  | Name of the Microblaze sub-project                                                                   |
 | `XILINX_ROOT`   | `/opt/Xilinx`                    | all (via `env/`)            | Root install directory of the Xilinx toolchain                                                       |
 | `XILINX_VERSION`| `2024.2`                         | all (via `env/`)            | Xilinx toolchain version, used to source `settings64.sh`                                             |

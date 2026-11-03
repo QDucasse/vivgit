@@ -163,6 +163,23 @@ So there are two distinct workflows, and picking the wrong one loses work:
     ```bash
     make PROJECT=<name> NO_UPDATE=1 synth
     ```
+
+#### How to use RTL from another repository?
+
+List extra source directories in an optional `rtl.ext` file at the project root, one per line, relative to the project root. Lines starting with `#` (and anything after a `#`) are comments. The directories can be anywhere in the project, typically a subdirectory of a git submodule:
+
+```bash
+git submodule add <url> ext/<repo>
+```
+
+```
+# rtl.ext
+ext/<repo>/rtl/<module>
+ext/<repo>/rtl/<other_module>
+```
+
+`create_project.tcl` adds the `.v`/`.sv`/`.vhd` files of each listed directory the same way as `rtl/` (recursively, skipping `attic` directories), and stops with an error if a directory is missing, typically a submodule that was not initialised (`git submodule update --init`).
+
 #### How to invoke Vivado/Vitis commands?
 
 Note that each tool has its command wrapped in a given script in `env/`, this simplifies the environment variables passing from `make` to the end programs.

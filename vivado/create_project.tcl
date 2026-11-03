@@ -71,12 +71,38 @@ proc collect_sources {dir exts} {
     return $found
 }
 
-foreach file [collect_sources $rtl_dir {v sv vhd}] {
-    # Exclude attic at any depth, not just as the immediate parent.
-    if {[lsearch -exact [file split $file] attic] >= 0} {
-        continue
+# Add the sources under dir, skipping attic at any depth (not just as the
+# immediate parent)
+proc add_rtl_dir {dir} {
+    foreach file [collect_sources $dir {v sv vhd}] {
+        if {[lsearch -exact [file split $file] attic] >= 0} {
+            continue
+        }
+        add_files -fileset sources_1 $file
     }
-    add_files -fileset sources_1 $file
+}
+
+add_rtl_dir $rtl_dir
+
+# External RTL: rtl.ext at the project root lists extra source directories,
+# one per line, relative to the project root ('#' starts a comment). Typical
+# use: a subdirectory of a git submodule. Each directory is walked like rtl/.
+set ext_file [file join $base_dir rtl.ext]
+if {[file exists $ext_file]} {
+    set fh [open $ext_file r]
+    set ext_lines [split [read $fh] "\n"]
+    close $fh
+    foreach line $ext_lines {
+        set line [string trim [regsub {#.*$} $line ""]]
+        if {$line eq ""} {
+            continue
+        }
+        set ext_dir [file normalize [file join $base_dir $line]]
+        if {![file isdirectory $ext_dir]} {
+            error "rtl.ext: $ext_dir not found (submodule not initialised? run git submodule update --init)"
+        }
+        add_rtl_dir $ext_dir
+    }
 }
 
 update_compile_order -fileset sources_1

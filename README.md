@@ -90,7 +90,8 @@ The following `make` targets are provided:
 | `new`          | Creates `bd/<name>.tcl` from a block design template (`TEMPLATE`), never overwriting an existing one             | shell  |
 | `project`      | Updates the `.tcl` from GUI changes (unless `NO_UPDATE=1`), then (re)creates the Vivado project (`.xpr`) from it | vivado |
 | `synth`        | Runs `project`, then performs synthesis for the project                                                          | vivado |
-| `impl`         | Performs implementation, generates `.xsa`, `.bit` and `.bin` (optional `IMPL_STRATEGY`). Does *not* re-run `synth` | vivado |
+| `impl`         | Performs implementation, generates `.xsa`, `.bit` and `.bin` (optional `IMPL_STRATEGY`), checks timing (`TIMING_STRICT`). Does *not* re-run `synth` | vivado |
+| `cdc`          | Clock domain crossing reports of the last implementation (or synthesis), without rerunning it (`CDC_STRICT`)    | vivado |
 | `check-bd`     | Reports whether the project's block design matches the checked-in `bd/<name>.tcl`, without building anything     | shell  |
 | `update`       | Updates the `.tcl` block design script with the changes made in the GUI, without touching the project            | vivado |
 | `sim`          | Runs behavioral simulation for a given testbench (`TB`), dumps a `.vcd`                                          | vivado |
@@ -115,6 +116,8 @@ Every target requires `PROJECT=<name>` to select which project to operate on. Th
 | `ALLOW_STALE_BD`| `0`                              | `project`, `impl`, `check-bd` | Set to `1` to downgrade the block design staleness guard from an error to a warning                  |
 | `ALLOW_MISSING_PINS` | `0`                          | `project`, `synth`          | Set to `1` to build even if the BD tcl connects pins that no longer exist (e.g. a renamed RTL port). Those connections are dropped, so this is for debugging only |
 | `IMPL_STRATEGY` | *(unset, keeps current)*         | `impl`                      | Overrides the `impl_1` run's strategy before launching (e.g. `Performance_ExplorePostRoutePhysOpt`)  |
+| `TIMING_STRICT` | `0`                              | `impl`                      | Set to `1` to fail when timing is not met (setup, hold or pulse width), instead of only printing `TIMING FAILED`. The bitstream is written anyway |
+| `CDC_STRICT`    | `0`                              | `cdc`                       | Set to `1` to fail when there are Critical clock domain crossings                                    |
 | `TB`            | *(required for `sim`)*           | `sim`                       | Name of the testbench module to simulate                                                             |
 | `SIM_TIME`      | `2000 ns`                        | `sim`                       | Simulation length passed to xsim's `run` (e.g. `10 us`, or `all`)                                    |
 | `NJOBS`         | `8`                              | `synth`, `impl`             | Number of parallel jobs used by `launch_runs`                                                        |
@@ -162,6 +165,29 @@ make PROJECT=<name> BOARD_DEST=/path/on/board BOARD_HOST=user@board deploy
 # on the board:
 cd /path/on/board/<name> && sh install_firmware.sh
 ```
+
+The build summary (see below) is staged with them as `<name>_summary.txt`, so the board side can tell which commit the loaded bitstream comes from.
+
+## Build reports
+
+`synth`, `impl` and `cdc` write their reports to `build/reports/<name>/`:
+
+| file | content |
+| --- | --- |
+| `summary.txt` | the last build in one file: commits of the design and of vivgit (`-dirty` when tracked files were modified), Vivado version, part, strategy, SHA-256 of `<name>.bin`, timing, utilization, critical warning and CDC counts |
+| `synth/*.rpt`, `impl/*.rpt` | Vivado's reports, without the `<top>_` prefix (e.g. `impl/utilization_placed.rpt`, `impl/methodology_drc_routed.rpt`) |
+| `impl/timing_summary.rpt` | the final timing summary (after post-route phys_opt when the strategy runs it) |
+| `synth/critical_warnings.txt`, `impl/critical_warnings.txt` | every `CRITICAL WARNING` of the runs (synthesis includes the out-of-context IP runs) |
+| `cdc/cdc_summary.rpt`, `cdc/cdc_details.rpt` | `report_cdc`, by clock pair and per crossing |
+| `cdc/clock_interaction.rpt` | `report_clock_interaction`: how each clock pair is constrained |
+
+At the end, `synth` and `impl` print the critical warnings per message ID (a constraint matching nothing, a pin not found, a failed timing requirement, ...). `impl` prints `TIMING MET` or `TIMING FAILED` with the failing checks: setup, hold, or pulse width (e.g. a clock above a pin's maximum frequency). Vivado writes the bitstream either way, `TIMING_STRICT=1` makes `impl` fail. `cdc` prints the crossings per severity, and the Critical and Warning ones per check:
+
+```bash
+make PROJECT=<name> TIMING_STRICT=1 impl cdc
+```
+
+`summary.txt` is refreshed by `impl`, `cdc` and `deploy`. The commits are the ones at the end of `impl`, and the CDC counts are only included when `cdc` ran after that bitstream was built.
 
 ## Supporting another board
 
@@ -255,4 +281,4 @@ Note that each tool has its command wrapped in a given script in `env/`, this si
 
 #### What's in `helpers`?
 
-Scripts in `helpers/` are plain shell/python called straight from `make`, without a tool wrapper, since they need neither Vivado nor Vitis: `check_bd.sh` (block design staleness guard) and `generate_overlay.py` (device-tree overlay generation).
+Scripts in `helpers/` are plain shell/python called straight from `make`, without a tool wrapper, since they need neither Vivado nor Vitis: `check_bd.sh` (block design staleness guard), `build_summary.sh` (`build/reports/<name>/summary.txt`) and `generate_overlay.py` (device-tree overlay generation).

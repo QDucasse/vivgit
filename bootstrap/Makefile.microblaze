@@ -32,6 +32,16 @@ BSP_INC     := $(BSP_DIR)/include
 BSP_LIB     := $(BSP_DIR)/lib
 SPECS_FILE  := $(BSP_DIR)/Xilinx.spec
 
+# ISA flags of the Microblaze-V (-march/-mabi), as configured in the block
+# design (32/64-bit, optional extensions). `make bsp` records them in the
+# BSP's cflags.yaml, which is the single source of truth.
+MB_ARCH_FLAGS ?= $(shell sed -n 's/^cflags: *//p' $(BSP_DIR)/cflags.yaml 2>/dev/null)
+ifeq ($(strip $(MB_ARCH_FLAGS)),)
+ifneq ($(MAKECMDGOALS),clean)
+$(error no ISA flags in $(BSP_DIR)/cflags.yaml, run `make PROJECT=$(PROJECT) bsp` first (or set MB_ARCH_FLAGS))
+endif
+endif
+
 # --- Sources
 SRCS := $(wildcard $(SRC_DIR)/$(MB_PROJECT)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/$(MB_PROJECT)/%.c,$(SRC_DIR)/$(MB_PROJECT)/%.o,$(SRCS))
@@ -47,9 +57,8 @@ OPT     ?= -O0 -g
 # uses for its own app builds: one section per function/object so that
 # --gc-sections drops unused BSP and libc code (needed to fit a 16 KB BRAM),
 # and --no-relax so the code does not depend on gp being set up.
-CFLAGS  := $(OPT) -DSDT -MMD -MP -march=rv32i_zicsr_zifencei_zba_zbb_zicbom -mabi=ilp32 \
+CFLAGS  := $(OPT) -DSDT -MMD -MP $(MB_ARCH_FLAGS) \
            -ffunction-sections -fdata-sections -fno-tree-loop-distribute-patterns -Wall -Wextra
-# CFLAGS  := -O0 -g -DSDT -MMD -MP -march=rv64i_zicsr_zifencei_zba_zbb_zicbom -mabi=lp6 # for rv64
 LDFLAGS := -L$(BSP_LIB) -Wl,--no-relax -Wl,--gc-sections \
            -Wl,--start-group -lxilstandalone -lxil -Wl,--end-group -lc -lm -lgcc -specs=$(SPECS_FILE) -T lscript.ld
 

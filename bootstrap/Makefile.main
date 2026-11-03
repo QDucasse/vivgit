@@ -16,8 +16,16 @@ endif
 # update if you want the GUI changes propagated to the tcl
 NO_UPDATE ?= 0
 
-# Plnx project for boot creation
+# Prebuilt bl31.elf, u-boot.elf and system.dtb for `boot`: a shared directory
+# holding all three (BOOT_FW_DIR), or a PetaLinux project (PLNX_PROJECT, uses
+# images/linux). BL31_ELF/UBOOT_ELF/SYSTEM_DTB override single files.
+# ALLOW_INCOMPLETE_BOOT=1 builds without the missing ones instead of failing.
+BOOT_FW_DIR ?=
 PLNX_PROJECT ?=
+BL31_ELF ?=
+UBOOT_ELF ?=
+SYSTEM_DTB ?=
+ALLOW_INCOMPLETE_BOOT ?= 0
 
 # Optional: override the impl_1 run's strategy (e.g.
 # Performance_ExplorePostRoutePhysOpt) without re-synthesizing. Leave unset
@@ -114,7 +122,8 @@ sdt:
 	$(RUN_XSCT) $(SCRIPTS_DIR)/xsct/generate_sdt.tcl
 
 boot:
-	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) PLNX_PROJECT=$(PLNX_PROJECT) \
+	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) BOOT_FW_DIR=$(BOOT_FW_DIR) PLNX_PROJECT=$(PLNX_PROJECT) \
+	BL31_ELF=$(BL31_ELF) UBOOT_ELF=$(UBOOT_ELF) SYSTEM_DTB=$(SYSTEM_DTB) ALLOW_INCOMPLETE_BOOT=$(ALLOW_INCOMPLETE_BOOT) \
 	$(RUN_XSCT) $(SCRIPTS_DIR)/xsct/generate_boot.tcl
 
 # -- vitis

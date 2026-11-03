@@ -1,5 +1,14 @@
 #----------------------------------------------------------------------------
-# generate_boot.tcl: generates the BOOT.BIN from the XSA and petalinux build
+# generate_boot.tcl: generates the BOOT.BIN from the XSA (FSBL, PMU firmware)
+# and prebuilt bl31.elf, u-boot.elf and system.dtb
+#
+# The prebuilt files are taken from, by priority:
+#   BL31_ELF / UBOOT_ELF / SYSTEM_DTB   one file each
+#   BOOT_FW_DIR                         a directory holding all three (e.g. a
+#                                       shared per-board directory)
+#   PLNX_PROJECT                        <PLNX_PROJECT>/images/linux
+# A missing file is an error, unless ALLOW_INCOMPLETE_BOOT=1 (the BOOT.BIN is
+# then built without it, and will not boot Linux).
 #----------------------------------------------------------------------------
 
 # ---- Project variables ----
@@ -17,10 +26,45 @@ if {[info exists ::env(PROJECT_ROOT)]} {
     set base_dir [file normalize [file join [file dirname [info script]] ../../]]
 }
 
-if {[info exists ::env(PLNX_PROJECT)]} {
-    set plnx_proj_path $::env(PLNX_PROJECT)
-} else {
-    error "PLNX_PROJECT environment variable not set"
+# Returns the env var's value, or "" if unset
+proc env_or_empty {name} {
+    if {[info exists ::env($name)]} { return $::env($name) }
+    return ""
+}
+
+# ---- Prebuilt boot files ----
+set fw_dir [env_or_empty BOOT_FW_DIR]
+if {$fw_dir eq "" && [env_or_empty PLNX_PROJECT] ne ""} {
+    set fw_dir [file join [env_or_empty PLNX_PROJECT] images linux]
+}
+set allow_incomplete [expr {[env_or_empty ALLOW_INCOMPLETE_BOOT] eq "1"}]
+
+# Resolves one prebuilt file: its own variable first, then fw_dir. Returns ""
+# and records it in missing_fw when the file is not found.
+set missing_fw {}
+proc resolve_fw {var name} {
+    global fw_dir missing_fw
+    set path [env_or_empty $var]
+    if {$path eq "" && $fw_dir ne ""} {
+        set path [file join $fw_dir $name]
+    }
+    if {$path ne "" && [file isfile $path]} {
+        return [file normalize $path]
+    }
+    lappend missing_fw "  $name ([expr {$path eq "" ? "$var, BOOT_FW_DIR and PLNX_PROJECT not set" : "not found: $path"}])"
+    return ""
+}
+set bl31_path   [resolve_fw BL31_ELF bl31.elf]
+set uboot_path  [resolve_fw UBOOT_ELF u-boot.elf]
+# Note: No kernel image since we load it through PXE in u-boot
+set sysdtb_path [resolve_fw SYSTEM_DTB system.dtb]
+
+if {[llength $missing_fw] > 0} {
+    set msg "Missing prebuilt boot files:\n[join $missing_fw \n]\nPoint BOOT_FW_DIR at a directory holding bl31.elf, u-boot.elf and system.dtb (or set BL31_ELF/UBOOT_ELF/SYSTEM_DTB, or PLNX_PROJECT)."
+    if {!$allow_incomplete} {
+        error $msg
+    }
+    puts "WARNING: $msg\nALLOW_INCOMPLETE_BOOT=1: building BOOT.BIN without them, it will not boot Linux."
 }
 
 # Dirs/Paths setup
@@ -29,12 +73,7 @@ set proj_dir    [file join $base_dir build $proj_name]
 set sdt_dir     [file join $proj_dir "${proj_name}.sdt"]
 set boot_dir    [file join $proj_dir "${proj_name}.boot"]
 set xsa_path    "$proj_dir/${proj_name}.xsa"
-# -- plnx related
 set bit_path    [glob -nocomplain -directory $proj_dir *.bit]
-set uboot_path  [glob -nocomplain -directory "$plnx_proj_path/images/linux" u-boot.elf]
-set bl31_path   [glob -nocomplain -directory "$plnx_proj_path/images/linux" bl31.elf]
-# Note: No kernel image or dtb since we load them through PXE in u-boot
-set sysdtb_path [glob -nocomplain -directory "$plnx_proj_path/images/linux" system.dtb]
 
 # Ensure output directory exists
 file mkdir $boot_dir
@@ -128,15 +167,10 @@ proc create_boot {} {
     # Set compiler and flags
     common::set_property APP_COMPILER "aarch64-none-elf-gcc" $fsbl_design
 
-    # Create app skeleton to get the flags
+    # Board-specific FSBL code (e.g. the ZCU104 I2C setup in xfsbl_board.c) is
+    # selected by the XPS_BOARD_* define that the BSP's xparameters.h gets from
+    # the project's board part (BOARD_NAME), so no extra compiler flags here.
     hsi::generate_app -dir $fsbl_dir -compile
-
-    # Capture the flags
-    set current_flags [common::get_property APP_COMPILER_FLAGS $fsbl_design]
-    # Add new flags
-    common::set_property -name APP_COMPILER_FLAGS \
-        -value "$current_flags -DRSA_SUPPORT -DXPS_BOARD_ZCU104" \
-        -objects $fsbl_design
 
     # Note: If the error of a missing library occurs (missing xiicps.h), I2C1 might be missing,
     # https://adaptivesupport.amd.com/s/article/73673?language=en_US

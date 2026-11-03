@@ -86,7 +86,7 @@ The following `make` targets are provided:
 | `update`       | Updates the `.tcl` block design script with the changes made in the GUI, without touching the project            | vivado |
 | `sim`          | Runs behavioral simulation for a given testbench (`TB`), dumps a `.vcd`                                          | vivado |
 | `sdt`          | Generates the `sdt` from the `.xsa`                                                                              | xsct   |
-| `boot`         | Generates the `BOOT.BIN` from the `.xsa` and associated petalinux build (`PLNX_PROJECT`)                         | xsct   |
+| `boot`         | Generates the `BOOT.BIN` from the `.xsa` and prebuilt `bl31.elf`/`u-boot.elf`/`system.dtb` (`BOOT_FW_DIR`)      | xsct   |
 | `bsp`          | Generates the BSP using the `.xsa`, allowing the development of (e.g.) Microblaze apps                           | vitis  |
 | `overlay`      | Runs `sdt`, then generates a device-tree overlay (`_overlay.dtsi`) from the `sdt`'s `pl.dtsi`                    | shell  |
 | `dtbo`         | Compiles the overlay into a `.dtbo` with `dtc`                                                                   | shell  |
@@ -110,7 +110,10 @@ Every target requires `PROJECT=<name>` to select which project to operate on. Th
 | `PART_NAME`     | `xczu7ev-ffvc1156-2-e`           | `project`                   | Target FPGA part                                                                                     |
 | `BOARD_NAME`    | `xilinx.com:zcu104:part0:1.1`    | `project`                   | Target board part                                                                                    |
 | `BOARD_DTS`     | `zcu104-revc`                    | `sdt`                       | Board DTS name passed to `sdtgen`                                                                    |
-| `PLNX_PROJECT`  | *(required for `boot`)*          | `boot`                      | Path to the associated PetaLinux project (for `u-boot.elf`, `bl31.elf`, `system.dtb`)                |
+| `BOOT_FW_DIR`   | *(unset)*                        | `boot`                      | Directory holding prebuilt `bl31.elf`, `u-boot.elf` and `system.dtb`, e.g. a shared per-board directory |
+| `PLNX_PROJECT`  | *(unset)*                        | `boot`                      | Alternative to `BOOT_FW_DIR`: a PetaLinux project, whose `images/linux` is used                      |
+| `BL31_ELF`, `UBOOT_ELF`, `SYSTEM_DTB` | *(unset)*  | `boot`                      | Override a single prebuilt file                                                                      |
+| `ALLOW_INCOMPLETE_BOOT` | `0`                      | `boot`                      | Set to `1` to build `BOOT.BIN` without missing prebuilt files instead of failing (it will not boot Linux) |
 | `BOARD_DEST`    | *(required for `deploy`)*        | `deploy`                    | Destination directory for staged firmware (local path, or path on `BOARD_HOST`)                      |
 | `BOARD_HOST`    | *(unset, stages locally)*        | `deploy`                    | `user@host` to stage over SSH instead of a local path                                                |
 | `MB_PROJECT`    | current directory name           | `mb`, `elf-mb`, `clean-mb`  | Name of the Microblaze sub-project                                                                   |
@@ -134,7 +137,17 @@ cd /path/on/board/<name> && sh install_firmware.sh
 
 ## Generating and using a boot image
 
-TODO:
+`make PROJECT=<name> boot` builds `build/<name>/<name>.boot/BOOT.BIN` for a ZynqMP. The FSBL and PMU firmware are generated from the `.xsa`, so they follow the design's PS configuration. The bitstream is not included: it is loaded at runtime (see `deploy`).
+
+The other three parts, `bl31.elf` (Arm Trusted Firmware), `u-boot.elf` and `system.dtb`, are not design-specific and are taken prebuilt. Keep one directory per board outside the design repos, for example from a PetaLinux build or the `pre-built/linux/images/` folder of the board's AMD BSP, and point `BOOT_FW_DIR` at it:
+
+```bash
+make PROJECT=<name> BOOT_FW_DIR=/path/to/boot-fw/zcu104 boot
+```
+
+`PLNX_PROJECT=<petalinux project>` still works and uses its `images/linux`. The build stops if one of the files is missing.
+
+`system.dtb` describes the PS side, so it has to match the design's PS configuration: rebuild it (and `BOOT.BIN`) when the PS settings in the block design change.
 
 
 ## Microblaze

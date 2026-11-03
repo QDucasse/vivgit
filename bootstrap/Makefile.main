@@ -48,6 +48,10 @@ ALLOW_INCOMPLETE_BOOT ?= 0
 # to keep whatever strategy is already on the run.
 IMPL_STRATEGY ?=
 
+# Set to 1 to make `impl` fail when timing is not met (setup, hold or pulse
+# width); by default it only prints TIMING FAILED
+TIMING_STRICT ?= 0
+
 # Simulation length for `sim`, passed to xsim's run (e.g. "10 us", or "all")
 SIM_TIME ?= 2000 ns
 
@@ -101,7 +105,7 @@ help:
 	@echo "  update     export GUI changes to bd/<name>.tcl only"
 	@echo "  check-bd   check that the project BD matches bd/<name>.tcl"
 	@echo "  synth      project + synthesis"
-	@echo "  impl       implementation, .bit/.bin/.xsa (IMPL_STRATEGY), does not re-run synth"
+	@echo "  impl       implementation, .bit/.bin/.xsa (IMPL_STRATEGY, TIMING_STRICT), does not re-run synth"
 	@echo "  sim        behavioral simulation of testbench TB (SIM_TIME)"
 	@echo ""
 	@echo "Software and board:"
@@ -164,7 +168,7 @@ synth: project
 impl:
 	@$(CHECK_BD) freshness
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) NJOBS=$(NJOBS) IMPL_STRATEGY=$(IMPL_STRATEGY) \
-	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/run_impl.tcl
+	TIMING_STRICT=$(TIMING_STRICT) $(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/run_impl.tcl
 
 update:
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) \

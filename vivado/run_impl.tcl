@@ -81,5 +81,38 @@ file copy -force {*}[glob -nocomplain "$proj_dir/${proj_name}.runs/impl_1/*.rpt"
 
 puts "IMPL_WNS: [get_property STATS.WNS $impl_run]"
 puts "IMPL_TNS: [get_property STATS.TNS $impl_run]"
+puts "IMPL_WHS: [get_property STATS.WHS $impl_run]"
+puts "IMPL_THS: [get_property STATS.THS $impl_run]"
+puts "IMPL_TPWS: [get_property STATS.TPWS $impl_run]"
+
+# ---- Timing check ----
+# Vivado writes the bitstream even when timing fails. Check setup (WNS),
+# hold (WHS) and pulse width (TPWS, e.g. a clock above a pin's maximum
+# frequency), and with TIMING_STRICT=1 fail instead of only warning.
+set timing_failed {}
+set timing_unknown {}
+foreach {check stat} {setup STATS.WNS hold STATS.WHS {pulse width} STATS.TPWS} {
+    set slack [get_property $stat $impl_run]
+    if {![string is double -strict $slack]} {
+        lappend timing_unknown $check
+    } elseif {$slack < 0} {
+        lappend timing_failed "$check ([string range $stat 6 end] = $slack ns)"
+    }
+}
+set timing_strict [expr {[info exists ::env(TIMING_STRICT)] && $::env(TIMING_STRICT) eq "1"}]
+if {[llength $timing_unknown] > 0} {
+    # Not reported by the run: count it as a failure for TIMING_STRICT
+    lappend timing_failed "no [join $timing_unknown {/}] slack reported by impl_1"
+}
+if {[llength $timing_failed] == 0} {
+    puts "TIMING MET"
+} else {
+    puts "TIMING FAILED: [join $timing_failed {, }]"
+    puts "  details: [file join $report_dir *timing_summary_routed.rpt]"
+}
 
 close_project
+
+if {[llength $timing_failed] > 0 && $timing_strict} {
+    error "timing not met and TIMING_STRICT=1 (the bitstream was written anyway)"
+}

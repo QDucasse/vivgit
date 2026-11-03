@@ -1,5 +1,5 @@
 #----------------------------------------------------------------------------
-# generate_sdt.tcl: generates the BOOT.BIN from the XSA and petalinux build
+# generate_boot.tcl: generates the BOOT.BIN from the XSA and petalinux build
 #----------------------------------------------------------------------------
 
 # ---- Project variables ----
@@ -29,7 +29,6 @@ set proj_dir    [file join $base_dir build $proj_name]
 set sdt_dir     [file join $proj_dir "${proj_name}.sdt"]
 set boot_dir    [file join $proj_dir "${proj_name}.boot"]
 set xsa_path    "$proj_dir/${proj_name}.xsa"
-set boot_dir    "$proj_dir/${proj_name}.boot"
 # -- plnx related
 set bit_path    [glob -nocomplain -directory $proj_dir *.bit]
 set uboot_path  [glob -nocomplain -directory "$plnx_proj_path/images/linux" u-boot.elf]

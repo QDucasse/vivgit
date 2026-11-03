@@ -35,10 +35,14 @@ if {![file exists $xpr_path]} {
 open_project $xpr_path
 
 # Absolute path of BD inside the build project
-set bd_path [glob -nocomplain "$proj_dir/${proj_name}.srcs/sources_1/bd/${proj_name}/${proj_name}.bd"]
+set bd_path [file join $proj_dir ${proj_name}.srcs sources_1 bd $proj_name ${proj_name}.bd]
+
+if {![file exists $bd_path]} {
+    error "Block design file not found: $bd_path"
+}
 
 open_bd_design $bd_path
-write_bd_tcl ./$bd_dir/$proj_name.tcl -force
+write_bd_tcl [file join $bd_dir ${proj_name}.tcl] -force
 set_property synth_checkpoint_mode None [get_files $bd_path]
 generate_target all [get_files $bd_path]
 close_bd_design [current_bd_design]

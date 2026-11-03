@@ -41,9 +41,17 @@ DEPS := $(patsubst $(SRC_DIR)/$(MB_PROJECT)/%.c,$(SRC_DIR)/$(MB_PROJECT)/%.d,$(S
 CC      := riscv64-unknown-elf-gcc
 OBJCOPY := riscv64-unknown-elf-objcopy
 OBJDUMP := riscv64-unknown-elf-objdump
-CFLAGS  := -O0 -g -DSDT -MMD -MP -march=rv32i_zicsr_zifencei_zba_zbb_zicbom -mabi=ilp32
+# Optimization/debug level (Vitis builds apps with -O2)
+OPT     ?= -O0 -g
+# Section flags mirror the BSP's microblaze_riscv_toolchain.cmake, which Vitis
+# uses for its own app builds: one section per function/object so that
+# --gc-sections drops unused BSP and libc code (needed to fit a 16 KB BRAM),
+# and --no-relax so the code does not depend on gp being set up.
+CFLAGS  := $(OPT) -DSDT -MMD -MP -march=rv32i_zicsr_zifencei_zba_zbb_zicbom -mabi=ilp32 \
+           -ffunction-sections -fdata-sections -fno-tree-loop-distribute-patterns -Wall -Wextra
 # CFLAGS  := -O0 -g -DSDT -MMD -MP -march=rv64i_zicsr_zifencei_zba_zbb_zicbom -mabi=lp6 # for rv64
-LDFLAGS := -L$(BSP_LIB) -Wl,--start-group -lxilstandalone -lxil -Wl,--end-group -lc -lm -lgcc -specs=$(SPECS_FILE) -T lscript.ld
+LDFLAGS := -L$(BSP_LIB) -Wl,--no-relax -Wl,--gc-sections \
+           -Wl,--start-group -lxilstandalone -lxil -Wl,--end-group -lc -lm -lgcc -specs=$(SPECS_FILE) -T lscript.ld
 
 # Trying with -T $(LDS), but it overwrites the main linker script...
 

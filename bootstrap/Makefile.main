@@ -52,6 +52,9 @@ IMPL_STRATEGY ?=
 # width); by default it only prints TIMING FAILED
 TIMING_STRICT ?= 0
 
+# Set to 1 to make `cdc` fail when there are Critical clock domain crossings
+CDC_STRICT ?= 0
+
 # Simulation length for `sim`, passed to xsim's run (e.g. "10 us", or "all")
 SIM_TIME ?= 2000 ns
 
@@ -92,7 +95,7 @@ CHECK_BD := PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) NO_UPDATE=$(NO_UPDAT
 ALLOW_MISSING_PINS ?= 0
 
 
-.PHONY: default help new project synth impl check-bd update sim sdt boot bsp overlay dtbo deploy mb elf-mb clean-mb bit-mb check-mb-project
+.PHONY: default help new project synth impl cdc check-bd update sim sdt boot bsp overlay dtbo deploy mb elf-mb clean-mb bit-mb check-mb-project
 
 default: help
 
@@ -106,6 +109,7 @@ help:
 	@echo "  check-bd   check that the project BD matches bd/<name>.tcl"
 	@echo "  synth      project + synthesis"
 	@echo "  impl       implementation, .bit/.bin/.xsa (IMPL_STRATEGY, TIMING_STRICT), does not re-run synth"
+	@echo "  cdc        clock domain crossing reports of the last impl/synth (CDC_STRICT)"
 	@echo "  sim        behavioral simulation of testbench TB (SIM_TIME)"
 	@echo ""
 	@echo "Software and board:"
@@ -169,6 +173,11 @@ impl:
 	@$(CHECK_BD) freshness
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) NJOBS=$(NJOBS) IMPL_STRATEGY=$(IMPL_STRATEGY) \
 	TIMING_STRICT=$(TIMING_STRICT) $(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/run_impl.tcl
+
+# Clock domain crossing reports of the last impl (or synth) run, reruns nothing
+cdc:
+	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) CDC_STRICT=$(CDC_STRICT) \
+	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/run_cdc.tcl
 
 update:
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) \

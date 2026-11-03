@@ -158,6 +158,23 @@ make PROJECT=<name> BOARD_DEST=/path/on/board BOARD_HOST=user@board deploy
 cd /path/on/board/<name> && sh install_firmware.sh
 ```
 
+## Supporting another board
+
+The defaults target a ZCU104. For another board, nothing in `scripts/` needs to change:
+
+1. **Board settings in `config.mk`**: `PART_NAME`, `BOARD_NAME` (the Vivado board part, e.g. `xilinx.com:zcu102:part0:3.4`) and `BOARD_DTS` (the board device tree used by `sdt`, e.g. `zcu102-rev1.0`). Use `config/<name>.mk` instead when only some projects of the repository target that board. AMD boards are known to Vivado out of the box; third-party board files (e.g. Digilent's `vivado-boards`) must be made visible to Vivado first (installed from the board store, or listed in the `board.repoPaths` parameter), otherwise `project` fails when setting `BOARD_NAME` (`[Board 49-71] The board_part definition was not found`).
+2. **A block design template**, if `make new` should start from that board's processing system: create a project for the board in the GUI, add and configure its processing system (running the block automation applies the board presets), then export it with `write_bd_tcl` to `scripts/bootstrap/templates/<board>.tcl` and set `TEMPLATE = <board>` in `config.mk`. Any design name works, `new` renames it.
+3. **Constraints** in `constraints/<name>/*.xdc`, as for any project.
+4. **Boot files**, for `boot`: a directory with that board's `bl31.elf`, `u-boot.elf` and `system.dtb`, set as `BOOT_FW_DIR` in `config.mk` (see below).
+
+What still assumes a ZynqMP (Zynq UltraScale+):
+
+- `boot` only builds a ZynqMP `BOOT.BIN` (FSBL on the A53, PMU firmware). Zynq-7000 and Versal are not supported yet.
+- `overlay` replaces `&imux` with `&gic` in the generated overlay, which is needed on the ZCU104 and does nothing where there is no `imux`.
+- `deploy` and `install_firmware.sh` load the bitstream with `fpgautil`, so they need Linux on the board's processor.
+
+Block design `.tcl` files only run in the Vivado version that wrote them (2024.2 for the shipped template), see `XILINX_VERSION`.
+
 ## Generating and using a boot image
 
 `make PROJECT=<name> boot` builds `build/<name>/<name>.boot/BOOT.BIN` for a ZynqMP. The FSBL and PMU firmware are generated from the `.xsa`, so they follow the design's PS configuration. The bitstream is not included: it is loaded at runtime (see `deploy`).

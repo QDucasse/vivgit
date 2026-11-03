@@ -161,10 +161,35 @@ update_compile_order -fileset constrs_1
 
 # ---- Block design ----
 set bd_tcl [file join $bd_dir "${proj_name}.tcl"]
-if {[file exists $bd_tcl]} {
-    source $bd_tcl
-} else {
+if {![file exists $bd_tcl]} {
     error "Block design Tcl $bd_tcl not found."
+}
+
+# A BD tcl that connects a pin the RTL/IP no longer has (e.g. a renamed module
+# port) only triggers a warning in Vivado, and the connection is silently
+# dropped from the design. Make it an error while sourcing the BD, unless
+# ALLOW_MISSING_PINS=1. Scoped to the BD tcl so Vivado's own internals are
+# unaffected.
+set allow_missing_pins [expr {[info exists ::env(ALLOW_MISSING_PINS)] && $::env(ALLOW_MISSING_PINS) eq "1"}]
+set missing_pin_msg {BD 5-235}
+set missing_pin_hint "bd/${proj_name}.tcl connects pins that do not exist (see 'No pins matched' above),\
+    typically a module port renamed in the RTL. Fix the block design, or set\
+    ALLOW_MISSING_PINS=1 to build without those connections."
+
+if {!$allow_missing_pins} {
+    set_msg_config -id $missing_pin_msg -new_severity ERROR
+}
+if {[catch {source $bd_tcl} err]} {
+    if {!$allow_missing_pins && [get_msg_config -count -id $missing_pin_msg] > 0} {
+        error $missing_pin_hint
+    }
+    error $err $::errorInfo
+}
+if {!$allow_missing_pins} {
+    reset_msg_config -id $missing_pin_msg -default_severity
+} elseif {[get_msg_config -count -id $missing_pin_msg] > 0} {
+    puts "WARNING: ALLOW_MISSING_PINS=1: bd/${proj_name}.tcl connects pins that do not exist\
+        (see 'No pins matched' above), building without those connections."
 }
 
 # Absolute path of BD inside the build project

@@ -102,6 +102,7 @@ Every target requires `PROJECT=<name>` to select which project to operate on. Th
 | `PROJECT`       | *(required)*                     | all                         | Name of the target project                                                                           |
 | `NO_UPDATE`     | `0`                              | `project`, `synth`          | Set to `1` to skip exporting the project's block design over `bd/<name>.tcl`. **Required when you hand-edited the `.tcl`**, otherwise the edit is overwritten |
 | `ALLOW_STALE_BD`| `0`                              | `project`, `impl`, `check-bd` | Set to `1` to downgrade the block design staleness guard from an error to a warning                  |
+| `ALLOW_MISSING_PINS` | `0`                          | `project`, `synth`          | Set to `1` to build even if the BD tcl connects pins that no longer exist (e.g. a renamed RTL port). Those connections are dropped, so this is for debugging only |
 | `IMPL_STRATEGY` | *(unset, keeps current)*         | `impl`                      | Overrides the `impl_1` run's strategy before launching (e.g. `Performance_ExplorePostRoutePhysOpt`)  |
 | `TB`            | *(required for `sim`)*           | `sim`                       | Name of the testbench module to simulate                                                             |
 | `SIM_TIME`      | `2000 ns`                        | `sim`                       | Simulation length passed to xsim's `run` (e.g. `10 us`, or `all`)                                    |

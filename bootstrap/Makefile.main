@@ -52,6 +52,10 @@ CHECK_BD := PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) NO_UPDATE=$(NO_UPDAT
             ALLOW_STALE_BD=$(ALLOW_STALE_BD) $(SCRIPTS_DIR)/helpers/check_bd.sh
 ALLOW_STALE_BD ?= 0
 
+# Set ALLOW_MISSING_PINS=1 to build a project whose BD tcl connects pins that no
+# longer exist (dropping those connections) instead of failing.
+ALLOW_MISSING_PINS ?= 0
+
 
 .PHONY: new project synth impl check-bd update sim sdt boot bsp overlay dtbo deploy mb elf-mb clean-mb
 
@@ -78,6 +82,7 @@ ifeq ($(NO_UPDATE),0)
 	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/update_bd.tcl
 endif
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) PART_NAME=$(PART_NAME) BOARD_NAME=$(BOARD_NAME) \
+	ALLOW_MISSING_PINS=$(ALLOW_MISSING_PINS) \
 	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/create_project.tcl
 
 synth: project

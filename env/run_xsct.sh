@@ -1,8 +1,7 @@
 #!/bin/bash
 set -e
 
-: "${XILINX_ROOT:?XILINX_ROOT not set}"
-: "${XILINX_VERSION:?XILINX_VERSION not set}"
+. "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
-. "$XILINX_ROOT/Vitis/$XILINX_VERSION/settings64.sh"
+xilinx_env Vitis
 exec xsct "$@"

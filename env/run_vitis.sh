@@ -1,12 +1,16 @@
 #!/bin/bash
 set -e
 
-: "${XILINX_ROOT:?XILINX_ROOT not set}"
-: "${XILINX_VERSION:?XILINX_VERSION not set}"
+. "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
-. "$XILINX_ROOT/Vitis/$XILINX_VERSION/settings64.sh"
+xilinx_env Vitis
 
 # In case of libssl not found, see https://adaptivesupport.amd.com/s/article/000036395?language=en_US
-export LD_LIBRARY_PATH="$XILINX_ROOT/Vitis/$XILINX_VERSION/tps/lnx64/cmake-3.24.2/libs/Rhel/9":$LD_LIBRARY_PATH
+# (the bundled cmake version differs between releases, hence the glob)
+for libdir in "$XILINX_VITIS"/tps/lnx64/cmake-*/libs/Rhel/9; do
+    if [ -d "$libdir" ]; then
+        export LD_LIBRARY_PATH="$libdir${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    fi
+done
 
 exec vitis -s "$@"

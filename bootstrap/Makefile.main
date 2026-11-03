@@ -55,7 +55,7 @@ SIM_TIME ?= 2000 ns
 TEMPLATE ?= zynq_ultra
 
 # Microblaze and stdin/stdout UART instance names in the block design, for
-# `bsp` and the Microblaze builds
+# `bsp` (the app builds then read them from build/<PROJECT>/bsp.mk)
 MB_CPU  ?= microblaze_riscv_0
 MB_UART ?= axi_uartlite_0
 
@@ -88,7 +88,7 @@ CHECK_BD := PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) NO_UPDATE=$(NO_UPDAT
 ALLOW_MISSING_PINS ?= 0
 
 
-.PHONY: default help new project synth impl check-bd update sim sdt boot bsp overlay dtbo deploy mb elf-mb clean-mb
+.PHONY: default help new project synth impl check-bd update sim sdt boot bsp overlay dtbo deploy mb elf-mb clean-mb check-mb-project
 
 default: help
 
@@ -201,14 +201,22 @@ deploy:
 	$(SCRIPTS_DIR)/board/deploy.sh
 
 # -- microblaze
+mb elf-mb clean-mb: check-mb-project
+check-mb-project:
+	@[ -n "$(MB_PROJECT)" ] || { echo "error: MB_PROJECT not set (name of the app in microblaze/)" >&2; exit 1; }
+
+# Installs a stub Makefile that includes scripts/bootstrap/Makefile.microblaze
 mb:
-	@mkdir $(MB_DIR)/$(MB_PROJECT)
-	@cp $(SCRIPTS_DIR)/bootstrap/Makefile.microblaze $(MB_DIR)/$(MB_PROJECT)/Makefile
+	@if [ -e $(MB_DIR)/$(MB_PROJECT)/Makefile ]; then \
+		echo "error: $(MB_DIR)/$(MB_PROJECT)/Makefile already exists" >&2; exit 1; fi
+	@mkdir -p $(MB_DIR)/$(MB_PROJECT)
+	@cp $(SCRIPTS_DIR)/bootstrap/Makefile.microblaze.stub $(MB_DIR)/$(MB_PROJECT)/Makefile
+	@echo "created $(MB_DIR)/$(MB_PROJECT)/Makefile"
 
 elf-mb:
-	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) MB_PROJECT=$(MB_PROJECT) MB_CPU=$(MB_CPU) \
+	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) MB_PROJECT=$(MB_PROJECT) \
 	$(MAKE) -C $(MB_DIR)/$(MB_PROJECT)
 
 clean-mb:
-	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) MB_PROJECT=$(MB_PROJECT) MB_CPU=$(MB_CPU) \
+	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) MB_PROJECT=$(MB_PROJECT) \
 	$(MAKE) -C $(MB_DIR)/$(MB_PROJECT) clean

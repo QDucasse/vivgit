@@ -29,6 +29,6 @@
 # NJOBS = 8
 
 # ---- Microblaze ----
-# Instance names in the block design, for `make bsp` and the Microblaze builds
+# Instance names in the block design, for `make bsp`
 # MB_CPU  = microblaze_riscv_0
 # MB_UART = axi_uartlite_0

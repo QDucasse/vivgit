@@ -1,0 +1,4 @@
+# vivgit: the Microblaze app build lives in the submodule, see scripts/README.md.
+# Per-app settings (e.g. OPT = -O2 -g) go above the include.
+PROJECT_ROOT := $(abspath $(dir $(abspath $(lastword $(MAKEFILE_LIST))))/../..)
+include $(PROJECT_ROOT)/scripts/bootstrap/Makefile.microblaze

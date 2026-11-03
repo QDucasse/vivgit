@@ -1,8 +1,14 @@
-# --- Xilinx installation info ----
-XILINX_ROOT    ?= /opt/Xilinx
-XILINX_VERSION ?= 2024.2
-export XILINX_ROOT
-export XILINX_VERSION
+# Build of one Microblaze app, microblaze/<app>/*.c. Included by the stub
+# Makefile that `make mb` installs in the app directory (per-app settings such
+# as OPT or LSCRIPT go above the include there), or run through
+# `make PROJECT=<proj> MB_PROJECT=<app> elf-mb` from the project root.
+
+# Project root: set by the stub, otherwise two levels above this Makefile
+MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+PROJECT_ROOT ?= $(abspath $(MAKEFILE_DIR)/../..)
+
+# Same optional configuration files as Makefile.main
+-include $(PROJECT_ROOT)/config.mk
 
 # --- Project info
 PROJECT ?= unset
@@ -11,42 +17,42 @@ ifeq ($(PROJECT),unset)
 $(error PROJECT not set, please specify the name of the target project)
 endif
 
+-include $(PROJECT_ROOT)/config/$(PROJECT).mk
+
 MB_PROJECT ?= $(notdir $(CURDIR))
 
-# Instance name of the Microblaze in the block design (must match `make bsp`)
-MB_CPU ?= microblaze_riscv_0
-
-# Directory of the current Makefile
-MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-
-# Project root is the parent of the Makefile directory
-PROJECT_ROOT ?= $(abspath $(MAKEFILE_DIR)/../..)
+# --- Xilinx installation info ----
+XILINX_ROOT    ?= /opt/Xilinx
+XILINX_VERSION ?= 2024.2
+export XILINX_ROOT
+export XILINX_VERSION
 
 # --- Dirs and file locations
 SRC_DIR     := $(PROJECT_ROOT)/microblaze
 SCRIPTS_DIR := $(PROJECT_ROOT)/scripts
 BUILD_DIR   := $(PROJECT_ROOT)/build/$(PROJECT)
 
-BSP_DIR     := $(BUILD_DIR)/$(PROJECT).vitis/$(PROJECT)_platform/$(MB_CPU)/standalone_$(MB_CPU)/bsp
+# `make bsp` writes bsp.mk with what Vitis generated for this design:
+#   BSP_DIR        headers, libraries and specs file of the BSP
+#   BSP_LSCRIPT    linker script for the design's memory map
+#   MB_ARCH_FLAGS  -march/-mabi of the Microblaze-V (32/64-bit, extensions)
+#   MB_CPU         the CPU instance it was built for
+BSP_MK := $(BUILD_DIR)/bsp.mk
+-include $(BSP_MK)
+ifeq ($(BSP_DIR),)
+ifneq ($(MAKECMDGOALS),clean)
+$(error $(BSP_MK) not found, run `make PROJECT=$(PROJECT) bsp` first)
+endif
+endif
+
 BSP_INC     := $(BSP_DIR)/include
 BSP_LIB     := $(BSP_DIR)/lib
 SPECS_FILE  := $(BSP_DIR)/Xilinx.spec
 
-# ISA flags of the Microblaze-V (-march/-mabi), as configured in the block
-# design (32/64-bit, optional extensions). `make bsp` records them in the
-# BSP's cflags.yaml, which is the single source of truth.
-MB_ARCH_FLAGS ?= $(shell sed -n 's/^cflags: *//p' $(BSP_DIR)/cflags.yaml 2>/dev/null)
-ifeq ($(strip $(MB_ARCH_FLAGS)),)
-ifneq ($(MAKECMDGOALS),clean)
-$(error no ISA flags in $(BSP_DIR)/cflags.yaml, run `make PROJECT=$(PROJECT) bsp` first (or set MB_ARCH_FLAGS))
-endif
-endif
-
 # Linker script: the app's own lscript.ld if it has one (e.g. to change the
 # stack/heap sizes or place code in DDR), otherwise the one `make bsp`
-# generates from the design's memory map.
+# generated from the design's memory map.
 APP_LSCRIPT := $(SRC_DIR)/$(MB_PROJECT)/lscript.ld
-BSP_LSCRIPT := $(BUILD_DIR)/$(PROJECT).vitis/$(PROJECT)_app/src/lscript.ld
 LSCRIPT     ?= $(if $(wildcard $(APP_LSCRIPT)),$(APP_LSCRIPT),$(BSP_LSCRIPT))
 
 # --- Sources
@@ -77,13 +83,8 @@ RUN_OBJDUMP := $(SCRIPTS_DIR)/env/run_cmd.sh $(OBJDUMP)
 # --- Targets
 all: $(MB_PROJECT).elf $(MB_PROJECT).bin $(MB_PROJECT).dump
 
-$(MB_PROJECT).elf: $(OBJS) $(LSCRIPT)
+$(MB_PROJECT).elf: $(OBJS) $(LSCRIPT) $(BSP_MK)
 	$(RUN_CC) $(CFLAGS) -I$(BSP_INC) $(OBJS) $(LDFLAGS) -o $@
-
-$(BSP_LSCRIPT):
-	@echo "error: no linker script: $(APP_LSCRIPT) does not exist and" >&2
-	@echo "       $@ is missing, run \`make PROJECT=$(PROJECT) bsp\` first (or set LSCRIPT)" >&2
-	@exit 1
 
 $(MB_PROJECT).bin: $(MB_PROJECT).elf
 	$(RUN_OBJCPY) -O binary $< $@
@@ -94,5 +95,12 @@ $(MB_PROJECT).dump: $(MB_PROJECT).elf
 %.o: %.c
 	$(RUN_CC) $(CFLAGS) -I$(BSP_INC) -c $< -o $@
 
+# Recompile after `make bsp` (new headers, possibly other ISA flags) and when
+# an included header changes
+$(OBJS): $(BSP_MK)
+-include $(DEPS)
+
 clean:
-	rm -f $(OBJS) $(DEPS) $(MB_PROJECT).elf $(MB_PROJECT).bin
+	rm -f $(OBJS) $(DEPS) $(MB_PROJECT).elf $(MB_PROJECT).bin $(MB_PROJECT).dump
+
+.PHONY: all clean

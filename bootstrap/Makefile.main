@@ -1,10 +1,15 @@
 SHELL := /bin/bash
 
-# --- Xilinx installation info ----
-XILINX_ROOT    ?= /opt/Xilinx
-XILINX_VERSION ?= 2024.2
-export XILINX_ROOT
-export XILINX_VERSION
+# Root of the design project (override if invoking make from elsewhere)
+PROJECT_ROOT ?= $(CURDIR)
+
+# ---- Optional configuration files ----
+# Read before the defaults below, so they can set any variable of this file:
+#   config.mk             for the whole repository (e.g. the board)
+#   config/<PROJECT>.mk   for one project, read after config.mk
+# Use plain assignments (=) in them. Precedence, highest first: command line,
+# config/<PROJECT>.mk, config.mk, then the environment and the defaults below.
+-include $(PROJECT_ROOT)/config.mk
 
 # ---- Project name, passed from CLI ----
 PROJECT ?= unset
@@ -12,6 +17,14 @@ PROJECT ?= unset
 ifeq ($(PROJECT),unset)
 $(error PROJECT not set, please specify the name of the target project)
 endif
+
+-include $(PROJECT_ROOT)/config/$(PROJECT).mk
+
+# --- Xilinx installation info ----
+XILINX_ROOT    ?= /opt/Xilinx
+XILINX_VERSION ?= 2024.2
+export XILINX_ROOT
+export XILINX_VERSION
 
 # update if you want the GUI changes propagated to the tcl
 NO_UPDATE ?= 0
@@ -43,14 +56,13 @@ TEMPLATE ?= zynq_ultra
 MB_CPU  ?= microblaze_riscv_0
 MB_UART ?= axi_uartlite_0
 
-# ---- Project specific, change them for your board ----
+# ---- Board defaults (ZCU104), set them in config.mk for another board ----
 NJOBS      ?= 8
 PART_NAME  ?= xczu7ev-ffvc1156-2-e
 BOARD_NAME ?= xilinx.com:zcu104:part0:1.1
 BOARD_DTS  ?= zcu104-revc
 
 # ---- Build/Script Dirs ----
-PROJECT_ROOT ?= $(CURDIR)
 SCRIPTS_DIR ?= $(PROJECT_ROOT)/scripts
 BUILD_DIR := $(PROJECT_ROOT)/build/$(PROJECT)
 MB_DIR := $(PROJECT_ROOT)/microblaze

@@ -130,6 +130,21 @@ Example, running implementation with an explicit strategy and 16 parallel jobs:
 make PROJECT=<name> IMPL_STRATEGY=Performance_ExplorePostRoutePhysOpt NJOBS=16 impl
 ```
 
+#### Configuration files
+
+Instead of passing them every time, any of these variables can be set in two optional files at the project root, which are meant to be committed:
+
+- `config.mk`: for the whole repository, typically the board,
+- `config/<name>.mk`: for one project, read after `config.mk` (for example a project targeting another board).
+
+Start from `scripts/bootstrap/config.mk.example`, which lists the usual settings commented out with their defaults:
+
+```bash
+cp scripts/bootstrap/config.mk.example config.mk
+```
+
+Use plain assignments (`=`). From highest to lowest precedence: the command line, `config/<name>.mk`, `config.mk`, then the environment and the defaults.
+
 Once a `.bin`/`.dtbo` pair is generated, deploy it to a board over NFS or SSH, then install it from the board itself:
 
 ```bash

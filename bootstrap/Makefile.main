@@ -88,7 +88,7 @@ CHECK_BD := PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) NO_UPDATE=$(NO_UPDAT
 ALLOW_MISSING_PINS ?= 0
 
 
-.PHONY: default help new project synth impl check-bd update sim sdt boot bsp overlay dtbo deploy mb elf-mb clean-mb check-mb-project
+.PHONY: default help new project synth impl check-bd update sim sdt boot bsp overlay dtbo deploy mb elf-mb clean-mb bit-mb check-mb-project
 
 default: help
 
@@ -109,9 +109,11 @@ help:
 	@echo "  overlay    sdt + device-tree overlay .dtsi"
 	@echo "  dtbo       compile the overlay into a .dtbo"
 	@echo "  boot       BOOT.BIN (BOOT_FW_DIR or PLNX_PROJECT)"
-	@echo "  deploy     stage .bin/.dtbo to a board (BOARD_DEST, BOARD_HOST)"
+	@echo "  deploy     stage .bin/.dtbo to a board (BOARD_DEST, BOARD_HOST;"
+	@echo "             MB_PROJECT to stage the bit-mb bitstream instead)"
 	@echo "  bsp        Microblaze BSP (MB_CPU, MB_UART)"
 	@echo "  mb, elf-mb, clean-mb   Microblaze sub-project MB_PROJECT"
+	@echo "  bit-mb     bitstream with MB_PROJECT in the Microblaze's BRAM"
 	@echo ""
 	@echo "Current settings (from config.mk, config/<name>.mk or defaults):"
 	@echo "  PART_NAME=$(PART_NAME) BOARD_NAME=$(BOARD_NAME)"
@@ -198,10 +200,10 @@ dtbo:
 
 deploy:
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) BOARD_DEST=$(BOARD_DEST) BOARD_HOST=$(BOARD_HOST) \
-	$(SCRIPTS_DIR)/board/deploy.sh
+	MB_PROJECT=$(MB_PROJECT) $(SCRIPTS_DIR)/board/deploy.sh
 
 # -- microblaze
-mb elf-mb clean-mb: check-mb-project
+mb elf-mb clean-mb bit-mb: check-mb-project
 check-mb-project:
 	@[ -n "$(MB_PROJECT)" ] || { echo "error: MB_PROJECT not set (name of the app in microblaze/)" >&2; exit 1; }
 
@@ -220,3 +222,8 @@ elf-mb:
 clean-mb:
 	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) MB_PROJECT=$(MB_PROJECT) \
 	$(MAKE) -C $(MB_DIR)/$(MB_PROJECT) clean
+
+# Bitstream with the app in the Microblaze's BRAM: <PROJECT>_<MB_PROJECT>.bit/.bin
+bit-mb: elf-mb
+	PROJECT=$(PROJECT) PROJECT_ROOT=$(PROJECT_ROOT) MB_PROJECT=$(MB_PROJECT) MB_CPU=$(MB_CPU) \
+	$(RUN_VIVADO) $(SCRIPTS_DIR)/vivado/run_bit_mb.tcl

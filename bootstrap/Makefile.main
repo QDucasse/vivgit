@@ -35,6 +35,9 @@ IMPL_STRATEGY ?=
 # Simulation length for `sim`, passed to xsim's run (e.g. "10 us", or "all")
 SIM_TIME ?= 2000 ns
 
+# Block design template for `new`, from scripts/bootstrap/templates/<TEMPLATE>.tcl
+TEMPLATE ?= zynq_ultra
+
 # Microblaze and stdin/stdout UART instance names in the block design, for
 # `bsp` and the Microblaze builds
 MB_CPU  ?= microblaze_riscv_0
@@ -78,9 +81,18 @@ help:
 	@echo vivgit main interface, available commands:
 
 # -- shell
+# Copies the template and renames its design (the `set design_name` line that
+# write_bd_tcl emits) to the project. Never overwrites an existing BD tcl.
+TEMPLATES_DIR := $(SCRIPTS_DIR)/bootstrap/templates
 new:
-	cp $(SCRIPTS_DIR)/bootstrap/templates/zynq_ultra.tcl bd/$(PROJECT).tcl
-	sed -i 's/base_zynq/$(PROJECT)/g' bd/$(PROJECT).tcl
+	@test -f $(TEMPLATES_DIR)/$(TEMPLATE).tcl || { \
+	    echo "Unknown TEMPLATE '$(TEMPLATE)', available: $$(cd $(TEMPLATES_DIR) && ls *.tcl | sed 's/\.tcl$$//' | tr '\n' ' ')"; \
+	    exit 1; }
+	@test ! -e $(PROJECT_ROOT)/bd/$(PROJECT).tcl || { \
+	    echo "bd/$(PROJECT).tcl already exists, not overwriting it"; exit 1; }
+	mkdir -p $(PROJECT_ROOT)/bd
+	cp $(TEMPLATES_DIR)/$(TEMPLATE).tcl $(PROJECT_ROOT)/bd/$(PROJECT).tcl
+	sed -i 's/^set design_name .*/set design_name $(PROJECT)/' $(PROJECT_ROOT)/bd/$(PROJECT).tcl
 
 # Reports whether the project's BD matches the checked-in tcl. Run it on its own
 # to check without building anything.

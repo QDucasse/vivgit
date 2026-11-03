@@ -78,7 +78,7 @@ The following `make` targets are provided:
 
 | make command   | description                                                                                                      | tool   |
 | -------------- | ---------------------------------------------------------------------------------------------------------------- | ------ |
-| `new`          | Creates a new block design from the Zynq template in the BSP                                                     | shell  |
+| `new`          | Creates `bd/<name>.tcl` from a block design template (`TEMPLATE`), never overwriting an existing one             | shell  |
 | `project`      | Updates the `.tcl` from GUI changes (unless `NO_UPDATE=1`), then (re)creates the Vivado project (`.xpr`) from it | vivado |
 | `synth`        | Runs `project`, then performs synthesis for the project                                                          | vivado |
 | `impl`         | Performs implementation, generates `.xsa`, `.bit` and `.bin` (optional `IMPL_STRATEGY`). Does *not* re-run `synth` | vivado |
@@ -100,6 +100,7 @@ Every target requires `PROJECT=<name>` to select which project to operate on. Th
 | variable        | default                          | used by                     | description                                                                                          |
 | --------------- | -------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `PROJECT`       | *(required)*                     | all                         | Name of the target project                                                                           |
+| `TEMPLATE`      | `zynq_ultra`                     | `new`                       | Block design template, from `scripts/bootstrap/templates/<TEMPLATE>.tcl`                             |
 | `NO_UPDATE`     | `0`                              | `project`, `synth`          | Set to `1` to skip exporting the project's block design over `bd/<name>.tcl`. **Required when you hand-edited the `.tcl`**, otherwise the edit is overwritten |
 | `ALLOW_STALE_BD`| `0`                              | `project`, `impl`, `check-bd` | Set to `1` to downgrade the block design staleness guard from an error to a warning                  |
 | `ALLOW_MISSING_PINS` | `0`                          | `project`, `synth`          | Set to `1` to build even if the BD tcl connects pins that no longer exist (e.g. a renamed RTL port). Those connections are dropped, so this is for debugging only |
